@@ -1,5 +1,7 @@
 # CVgen 🚀
 
+**[🌐 Voir la démo en ligne](https://cv-generator.remidupire.com/)**
+
 > **Générateur de CV personnalisé en ligne** – Crée, personnalise et exporte ton CV au format PNG/JPEG/PDF.
 
 ---
