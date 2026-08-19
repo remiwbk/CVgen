@@ -1,4 +1,12 @@
-import { Mail, Phone, MapPin, Globe, Calendar, Linkedin, Github } from 'lucide-react';
+import {
+  Mail,
+  Phone,
+  MapPin,
+  Globe,
+  Calendar,
+  Linkedin,
+  Github,
+} from 'lucide-react';
 import type { CVData, ThemeColors } from '@/types/types';
 
 interface Props {
@@ -8,32 +16,104 @@ interface Props {
   fontScale: number;
 }
 
-export default function ModernTemplate({ data, colors, fonts, fontScale }: Props) {
+export default function ModernTemplate({
+  data,
+  colors,
+  fonts,
+  fontScale,
+}: Props) {
   const fs = (n: number) => `${n * fontScale}px`;
   const hasSkills = data.skills.some((c) => c.items.length > 0);
 
   return (
-    <div style={{ fontFamily: fonts.body, color: colors.text, fontSize: fs(14) }} className="w-full h-full">
+    <div
+      style={{
+        fontFamily: fonts.body,
+        color: colors.text,
+        fontSize: fs(14),
+      }}
+      className="w-full h-full"
+    >
       <header
         className="px-10 py-8 flex items-center justify-between gap-6"
-        style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`, color: '#fff' }}
+        style={{
+          background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`,
+          color: '#fff',
+        }}
       >
         {data.photo && (
-          <img src={data.photo} alt={data.name} crossOrigin="anonymous" className="w-24 h-24 rounded-full object-cover border-4 border-white/30 shadow-lg shrink-0" />
+          <img
+            src={data.photo}
+            alt={data.name}
+            crossOrigin="anonymous"
+            className="w-24 h-24 rounded-full object-cover border-4 border-white/30 shadow-lg shrink-0"
+          />
         )}
+
         <div className={data.photo ? 'flex-1 text-center' : ''}>
-          <h1 style={{ fontFamily: fonts.heading, fontSize: fs(36) }} className="font-bold tracking-tight leading-tight">
+          <h1
+            style={{
+              fontFamily: fonts.heading,
+              fontSize: fs(36),
+            }}
+            className="font-bold tracking-tight leading-tight"
+          >
             {data.name}
           </h1>
-          <p style={{ fontSize: fs(18) }} className="font-medium mt-1 opacity-90">{data.title}</p>
+
+          <p
+            style={{ fontSize: fs(18) }}
+            className="font-medium mt-1 opacity-90"
+          >
+            {data.title}
+          </p>
         </div>
-        <div style={{ fontSize: fs(13) }} className="space-y-1.5 opacity-95 shrink-0">
-          {data.email && <div className="flex items-center gap-2 justify-end"><Mail className="w-4 h-4" /><span>{data.email}</span></div>}
-          {data.phone && <div className="flex items-center gap-2 justify-end"><Phone className="w-4 h-4" /><span>{data.phone}</span></div>}
-          {data.location && <div className="flex items-center gap-2 justify-end"><MapPin className="w-4 h-4" /><span>{data.location}</span></div>}
-          {data.website && <div className="flex items-center gap-2 justify-end"><Globe className="w-4 h-4" /><span>{data.website}</span></div>}
-          {data.linkedin && <div className="flex items-center gap-2 justify-end"><Linkedin className="w-4 h-4" /><span>{data.linkedin}</span></div>}
-          {data.github && <div className="flex items-center gap-2 justify-end"><Github className="w-4 h-4" /><span>{data.github}</span></div>}
+
+        <div
+          style={{ fontSize: fs(13) }}
+          className="space-y-1.5 opacity-95 shrink-0"
+        >
+          {data.email && (
+            <div className="flex items-center gap-2 justify-end">
+              <Mail className="w-4 h-4" />
+              <span>{data.email}</span>
+            </div>
+          )}
+
+          {data.phone && (
+            <div className="flex items-center gap-2 justify-end">
+              <Phone className="w-4 h-4" />
+              <span>{data.phone}</span>
+            </div>
+          )}
+
+          {data.location && (
+            <div className="flex items-center gap-2 justify-end">
+              <MapPin className="w-4 h-4" />
+              <span>{data.location}</span>
+            </div>
+          )}
+
+          {data.website && (
+            <div className="flex items-center gap-2 justify-end">
+              <Globe className="w-4 h-4" />
+              <span>{data.website}</span>
+            </div>
+          )}
+
+          {data.linkedin && (
+            <div className="flex items-center gap-2 justify-end">
+              <Linkedin className="w-4 h-4" />
+              <span>{data.linkedin}</span>
+            </div>
+          )}
+
+          {data.github && (
+            <div className="flex items-center gap-2 justify-end">
+              <Github className="w-4 h-4" />
+              <span>{data.github}</span>
+            </div>
+          )}
         </div>
       </header>
 
@@ -41,28 +121,67 @@ export default function ModernTemplate({ data, colors, fonts, fontScale }: Props
         <aside className="col-span-1 space-y-7">
           {data.summary && (
             <section>
-              <h2 style={{ color: colors.primary, fontFamily: fonts.heading, fontSize: fs(13) }} className="font-bold uppercase tracking-widest mb-3 pb-2 border-b-2">
+              <h2
+                style={{
+                  color: colors.primary,
+                  fontFamily: fonts.heading,
+                  fontSize: fs(13),
+                }}
+                className="font-bold uppercase tracking-widest mb-3 pb-2 border-b-2"
+              >
                 Profil
               </h2>
-              <p style={{ fontSize: fs(13), color: colors.muted }} className="leading-relaxed">{data.summary}</p>
+
+              <p
+                style={{
+                  fontSize: fs(13),
+                  color: colors.muted,
+                  whiteSpace: 'pre-line',
+                }}
+                className="leading-relaxed"
+              >
+                {data.summary}
+              </p>
             </section>
           )}
 
           {hasSkills && (
             <section>
-              <h2 style={{ color: colors.primary, fontFamily: fonts.heading, fontSize: fs(13) }} className="font-bold uppercase tracking-widest mb-3 pb-2 border-b-2">
+              <h2
+                style={{
+                  color: colors.primary,
+                  fontFamily: fonts.heading,
+                  fontSize: fs(13),
+                }}
+                className="font-bold uppercase tracking-widest mb-3 pb-2 border-b-2"
+              >
                 Compétences
               </h2>
+
               <div className="space-y-3">
                 {data.skills.map((cat) =>
                   cat.items.length > 0 ? (
                     <div key={cat.id}>
-                      <h3 style={{ fontSize: fs(12), color: colors.secondary }} className="font-semibold mb-1.5">{cat.name}</h3>
+                      <h3
+                        style={{
+                          fontSize: fs(12),
+                          color: colors.secondary,
+                        }}
+                        className="font-semibold mb-1.5"
+                      >
+                        {cat.name}
+                      </h3>
+
                       <div className="flex flex-wrap gap-1.5">
                         {cat.items.map((s, i) => (
                           <span
                             key={i}
-                            style={{ background: colors.surface, color: colors.secondary, borderColor: colors.border, fontSize: fs(11) }}
+                            style={{
+                              background: colors.surface,
+                              color: colors.secondary,
+                              borderColor: colors.border,
+                              fontSize: fs(11),
+                            }}
                             className="font-medium px-2 py-0.5 rounded-full border"
                           >
                             {s}
@@ -78,12 +197,29 @@ export default function ModernTemplate({ data, colors, fonts, fontScale }: Props
 
           {data.interests.length > 0 && (
             <section>
-              <h2 style={{ color: colors.primary, fontFamily: fonts.heading, fontSize: fs(13) }} className="font-bold uppercase tracking-widest mb-3 pb-2 border-b-2">
+              <h2
+                style={{
+                  color: colors.primary,
+                  fontFamily: fonts.heading,
+                  fontSize: fs(13),
+                }}
+                className="font-bold uppercase tracking-widest mb-3 pb-2 border-b-2"
+              >
                 Centres d'intérêt
               </h2>
+
               <div className="flex flex-wrap gap-1.5">
                 {data.interests.map((it, i) => (
-                  <span key={i} style={{ background: colors.surface, color: colors.secondary, borderColor: colors.border, fontSize: fs(11) }} className="font-medium px-2 py-0.5 rounded-full border">
+                  <span
+                    key={i}
+                    style={{
+                      background: colors.surface,
+                      color: colors.secondary,
+                      borderColor: colors.border,
+                      fontSize: fs(11),
+                    }}
+                    className="font-medium px-2 py-0.5 rounded-full border"
+                  >
                     {it}
                   </span>
                 ))}
@@ -93,15 +229,53 @@ export default function ModernTemplate({ data, colors, fonts, fontScale }: Props
 
           {data.projects.length > 0 && (
             <section>
-              <h2 style={{ color: colors.primary, fontFamily: fonts.heading, fontSize: fs(13) }} className="font-bold uppercase tracking-widest mb-3 pb-2 border-b-2">
+              <h2
+                style={{
+                  color: colors.primary,
+                  fontFamily: fonts.heading,
+                  fontSize: fs(13),
+                }}
+                className="font-bold uppercase tracking-widest mb-3 pb-2 border-b-2"
+              >
                 Projets
               </h2>
+
               <div className="space-y-3">
                 {data.projects.map((p) => (
                   <div key={p.id}>
-                    <h3 style={{ fontSize: fs(13), color: colors.text }} className="font-semibold">{p.name}</h3>
-                    {p.url && <p style={{ fontSize: fs(11), color: colors.accent }}>{p.url}</p>}
-                    {p.description && <p style={{ fontSize: fs(11), color: colors.muted }} className="mt-1 leading-snug">{p.description}</p>}
+                    <h3
+                      style={{
+                        fontSize: fs(13),
+                        color: colors.text,
+                      }}
+                      className="font-semibold"
+                    >
+                      {p.name}
+                    </h3>
+
+                    {p.url && (
+                      <p
+                        style={{
+                          fontSize: fs(11),
+                          color: colors.accent,
+                        }}
+                      >
+                        {p.url}
+                      </p>
+                    )}
+
+                    {p.description && (
+                      <p
+                        style={{
+                          fontSize: fs(11),
+                          color: colors.muted,
+                          whiteSpace: 'pre-line',
+                        }}
+                        className="mt-1 leading-snug"
+                      >
+                        {p.description}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -112,21 +286,74 @@ export default function ModernTemplate({ data, colors, fonts, fontScale }: Props
         <main className="col-span-2 space-y-7">
           {data.experiences.length > 0 && (
             <section>
-              <h2 style={{ color: colors.primary, fontFamily: fonts.heading, fontSize: fs(13) }} className="font-bold uppercase tracking-widest mb-4 pb-2 border-b-2">
+              <h2
+                style={{
+                  color: colors.primary,
+                  fontFamily: fonts.heading,
+                  fontSize: fs(13),
+                }}
+                className="font-bold uppercase tracking-widest mb-4 pb-2 border-b-2"
+              >
                 Expériences
               </h2>
+
               <div className="space-y-4">
                 {data.experiences.map((exp) => (
-                  <div key={exp.id} className="relative pl-5 border-l-2" style={{ borderColor: colors.border }}>
-                    <span className="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full" style={{ background: colors.accent }} />
+                  <div
+                    key={exp.id}
+                    className="relative pl-5 border-l-2"
+                    style={{ borderColor: colors.border }}
+                  >
+                    <span
+                      className="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full"
+                      style={{ background: colors.accent }}
+                    />
+
                     <div className="flex items-baseline justify-between gap-3">
-                      <h3 style={{ fontSize: fs(15), color: colors.text }} className="font-semibold">{exp.role}</h3>
-                      <span style={{ fontSize: fs(11), color: colors.muted }} className="flex items-center gap-1 shrink-0">
-                        <Calendar className="w-3 h-3" /> {exp.period}
+                      <h3
+                        style={{
+                          fontSize: fs(15),
+                          color: colors.text,
+                        }}
+                        className="font-semibold"
+                      >
+                        {exp.role}
+                      </h3>
+
+                      <span
+                        style={{
+                          fontSize: fs(11),
+                          color: colors.muted,
+                        }}
+                        className="flex items-center gap-1 shrink-0"
+                      >
+                        <Calendar className="w-3 h-3" />
+                        {exp.period}
                       </span>
                     </div>
-                    <p style={{ fontSize: fs(13), color: colors.secondary }} className="font-medium">{exp.company}</p>
-                    {exp.description && <p style={{ fontSize: fs(13), color: colors.muted }} className="mt-1 leading-relaxed">{exp.description}</p>}
+
+                    <p
+                      style={{
+                        fontSize: fs(13),
+                        color: colors.secondary,
+                      }}
+                      className="font-medium"
+                    >
+                      {exp.company}
+                    </p>
+
+                    {exp.description && (
+                      <p
+                        style={{
+                          fontSize: fs(13),
+                          color: colors.muted,
+                          whiteSpace: 'pre-line',
+                        }}
+                        className="mt-1 leading-relaxed"
+                      >
+                        {exp.description}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -135,18 +362,64 @@ export default function ModernTemplate({ data, colors, fonts, fontScale }: Props
 
           {data.education.length > 0 && (
             <section>
-              <h2 style={{ color: colors.primary, fontFamily: fonts.heading, fontSize: fs(13) }} className="font-bold uppercase tracking-widest mb-4 pb-2 border-b-2">
+              <h2
+                style={{
+                  color: colors.primary,
+                  fontFamily: fonts.heading,
+                  fontSize: fs(13),
+                }}
+                className="font-bold uppercase tracking-widest mb-4 pb-2 border-b-2"
+              >
                 Formation
               </h2>
+
               <div className="space-y-3">
                 {data.education.map((ed) => (
                   <div key={ed.id}>
                     <div className="flex items-baseline justify-between gap-3">
-                      <h3 style={{ fontSize: fs(15), color: colors.text }} className="font-semibold">{ed.degree}</h3>
-                      <span style={{ fontSize: fs(11), color: colors.muted }} className="shrink-0">{ed.period}</span>
+                      <h3
+                        style={{
+                          fontSize: fs(15),
+                          color: colors.text,
+                        }}
+                        className="font-semibold"
+                      >
+                        {ed.degree}
+                      </h3>
+
+                      <span
+                        style={{
+                          fontSize: fs(11),
+                          color: colors.muted,
+                        }}
+                        className="shrink-0"
+                      >
+                        {ed.period}
+                      </span>
                     </div>
-                    <p style={{ fontSize: fs(13), color: colors.secondary }} className="font-medium">{ed.school}</p>
-                    {ed.description && <p style={{ fontSize: fs(13), color: colors.muted }} className="mt-1 leading-relaxed">{ed.description}</p>}
+
+                    <p
+                      style={{
+                        fontSize: fs(13),
+                        color: colors.secondary,
+                      }}
+                      className="font-medium"
+                    >
+                      {ed.school}
+                    </p>
+
+                    {ed.description && (
+                      <p
+                        style={{
+                          fontSize: fs(13),
+                          color: colors.muted,
+                          whiteSpace: 'pre-line',
+                        }}
+                        className="mt-1 leading-relaxed"
+                      >
+                        {ed.description}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>

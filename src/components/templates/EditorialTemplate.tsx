@@ -1,0 +1,462 @@
+import {
+  Mail,
+  Phone,
+  MapPin,
+  Globe,
+  Linkedin,
+  Github,
+} from 'lucide-react';
+
+import type { CVData, ThemeColors } from '@/types/types';
+
+interface Props {
+  data: CVData;
+  colors: ThemeColors;
+  fonts: { heading: string; body: string };
+  fontScale: number;
+}
+
+export default function EditorialTemplate({
+  data,
+  colors,
+  fonts,
+  fontScale,
+}: Props) {
+  const fs = (n: number) => `${n * fontScale}px`;
+  const hasSkills = data.skills.some((c) => c.items.length > 0);
+
+  const contactItems = [
+    { value: data.email, icon: Mail },
+    { value: data.phone, icon: Phone },
+    { value: data.location, icon: MapPin },
+    { value: data.website, icon: Globe },
+    { value: data.linkedin, icon: Linkedin },
+    { value: data.github, icon: Github },
+  ];
+
+  return (
+    <div
+      style={{
+        fontFamily: fonts.body,
+        color: colors.text,
+        fontSize: fs(14),
+      }}
+      className="w-full h-full px-11 py-10"
+    >
+      {/* =====================================================
+          HEADER
+      ====================================================== */}
+
+      <header
+        className="grid grid-cols-[1fr_auto] gap-8 pb-7 border-b"
+        style={{ borderColor: colors.border }}
+      >
+        <div>
+          <div
+            style={{
+              color: colors.accent,
+              fontSize: fs(11),
+            }}
+            className="font-bold uppercase tracking-[0.3em] mb-3"
+          >
+            Curriculum Vitae
+          </div>
+
+          <h1
+            style={{
+              fontFamily: fonts.heading,
+              fontSize: fs(42),
+              color: colors.primary,
+            }}
+            className="font-bold leading-none tracking-tight"
+          >
+            {data.name}
+          </h1>
+
+          <p
+            style={{
+              fontSize: fs(17),
+              color: colors.secondary,
+            }}
+            className="mt-3 font-medium"
+          >
+            {data.title}
+          </p>
+
+          <div
+            style={{
+              fontSize: fs(10.5),
+              color: colors.muted,
+            }}
+            className="flex flex-wrap gap-x-4 gap-y-1.5 mt-5"
+          >
+            {contactItems.map(({ value, icon: Icon }, index) =>
+              value ? (
+                <span
+                  key={index}
+                  className="flex items-center gap-1.5"
+                >
+                  <Icon className="w-3 h-3" />
+                  {value}
+                </span>
+              ) : null
+            )}
+          </div>
+        </div>
+
+        {data.photo && (
+          <img
+            src={data.photo}
+            alt={data.name}
+            crossOrigin="anonymous"
+            className="w-28 h-28 object-cover rounded-xl"
+            style={{
+              border: `3px solid ${colors.primary}`,
+            }}
+          />
+        )}
+      </header>
+
+      {/* =====================================================
+          CONTENT
+      ====================================================== */}
+
+      <div className="grid grid-cols-[0.72fr_1.28fr] gap-9 mt-8">
+
+        {/* ===================================================
+            LEFT COLUMN
+        ==================================================== */}
+
+        <aside className="space-y-7">
+
+          {/* PROFIL */}
+
+          {data.summary && (
+            <section>
+              <SectionTitle
+                fonts={fonts}
+                colors={colors}
+                fontSize={fs(13)}
+              >
+                Profil
+              </SectionTitle>
+
+              <p
+                style={{
+                  fontSize: fs(11.5),
+                  color: colors.muted,
+                  whiteSpace: 'pre-line',
+                }}
+                className="leading-relaxed"
+              >
+                {data.summary}
+              </p>
+            </section>
+          )}
+
+          {/* COMPÉTENCES */}
+
+          {hasSkills && (
+            <section>
+              <SectionTitle
+                fonts={fonts}
+                colors={colors}
+                fontSize={fs(13)}
+              >
+                Compétences
+              </SectionTitle>
+
+              <div className="space-y-3">
+                {data.skills.map((category) =>
+                  category.items.length > 0 ? (
+                    <div key={category.id}>
+                      <h3
+                        style={{
+                          color: colors.primary,
+                          fontSize: fs(11),
+                        }}
+                        className="font-bold mb-1"
+                      >
+                        {category.name}
+                      </h3>
+
+                      <p
+                        style={{
+                          fontSize: fs(10.5),
+                          color: colors.muted,
+                          whiteSpace: 'pre-line',
+                        }}
+                        className="leading-relaxed"
+                      >
+                        {category.items.join(' • ')}
+                      </p>
+                    </div>
+                  ) : null
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* CENTRES D'INTÉRÊT */}
+
+          {data.interests.length > 0 && (
+            <section>
+              <SectionTitle
+                fonts={fonts}
+                colors={colors}
+                fontSize={fs(13)}
+              >
+                Centres d'intérêt
+              </SectionTitle>
+
+              <p
+                style={{
+                  fontSize: fs(10.5),
+                  color: colors.muted,
+                  whiteSpace: 'pre-line',
+                }}
+                className="leading-relaxed"
+              >
+                {data.interests.join(' • ')}
+              </p>
+            </section>
+          )}
+        </aside>
+
+        {/* ===================================================
+            RIGHT COLUMN
+        ==================================================== */}
+
+        <main className="space-y-7">
+
+          {/* EXPÉRIENCES */}
+
+          {data.experiences.length > 0 && (
+            <section>
+              <SectionTitle
+                fonts={fonts}
+                colors={colors}
+                fontSize={fs(13)}
+              >
+                Expériences
+              </SectionTitle>
+
+              <div className="space-y-5">
+                {data.experiences.map((exp) => (
+                  <article key={exp.id}>
+                    <div className="flex items-start justify-between gap-4">
+
+                      <div>
+                        <h3
+                          style={{
+                            fontFamily: fonts.heading,
+                            color: colors.accent,
+                            fontSize: fs(11),
+                          }}
+                          className="font-bold"
+                        >
+                          {exp.role}
+                        </h3>
+
+                        <p
+                          style={{
+                            color: colors.secondary,
+                            fontSize: fs(11.5),
+                          }}
+                          className="font-medium mt-0.5"
+                        >
+                          {exp.company}
+                        </p>
+                      </div>
+
+                      <span
+                        style={{
+                          color: colors.muted,
+                          fontSize: fs(10),
+                        }}
+                        className="shrink-0 pt-1"
+                      >
+                        {exp.period}
+                      </span>
+
+                    </div>
+
+                    {exp.description && (
+                      <p
+                        style={{
+                          fontSize: fs(11),
+                          color: colors.muted,
+                          whiteSpace: 'pre-line',
+                        }}
+                        className="leading-relaxed mt-2"
+                      >
+                        {exp.description}
+                      </p>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* FORMATION */}
+
+          {data.education.length > 0 && (
+            <section>
+              <SectionTitle
+                fonts={fonts}
+                colors={colors}
+                fontSize={fs(13)}
+              >
+                Formation
+              </SectionTitle>
+
+              <div className="space-y-4">
+                {data.education.map((ed) => (
+                  <article key={ed.id}>
+                    <div className="flex items-start justify-between gap-4">
+
+                      <div>
+                        <h3
+                          style={{
+                            fontFamily: fonts.heading,
+                            color: colors.accent,
+                            fontSize: fs(11),
+                          }}
+                          className="font-bold"
+                        >
+                          {ed.degree}
+                        </h3>
+
+                        <p
+                          style={{
+                            color: colors.secondary,
+                            fontSize: fs(11),
+                          }}
+                          className="font-medium mt-0.5"
+                        >
+                          {ed.school}
+                        </p>
+                      </div>
+
+                      <span
+                        style={{
+                          color: colors.muted,
+                          fontSize: fs(10),
+                        }}
+                        className="shrink-0"
+                      >
+                        {ed.period}
+                      </span>
+
+                    </div>
+
+                    {ed.description && (
+                      <p
+                        style={{
+                          fontSize: fs(11),
+                          color: colors.muted,
+                          whiteSpace: 'pre-line',
+                        }}
+                        className="leading-relaxed mt-1.5"
+                      >
+                        {ed.description}
+                      </p>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* PROJETS */}
+
+          {data.projects.length > 0 && (
+            <section>
+              <SectionTitle
+                fonts={fonts}
+                colors={colors}
+                fontSize={fs(13)}
+              >
+                Projets
+              </SectionTitle>
+
+              <div className="space-y-3">
+                {data.projects.map((project) => (
+                  <article key={project.id}>
+                    <h3
+                      style={{
+                        color: colors.primary,
+                        fontSize: fs(13),
+                      }}
+                      className="font-bold"
+                    >
+                      {project.name}
+                    </h3>
+
+                    {project.url && (
+                      <p
+                        style={{
+                          color: colors.accent,
+                          fontSize: fs(9.5),
+                        }}
+                        className="mt-0.5"
+                      >
+                        {project.url}
+                      </p>
+                    )}
+
+                    {project.description && (
+                      <p
+                        style={{
+                          color: colors.muted,
+                          fontSize: fs(10.5),
+                          whiteSpace: 'pre-line',
+                        }}
+                        className="leading-relaxed mt-1"
+                      >
+                        {project.description}
+                      </p>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+        </main>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * =========================================================
+ * SECTION TITLE
+ * =========================================================
+ */
+
+function SectionTitle({
+  children,
+  fonts,
+  colors,
+  fontSize,
+}: {
+  children: React.ReactNode;
+  fonts: { heading: string; body: string };
+  colors: ThemeColors;
+  fontSize: string;
+}) {
+  return (
+    <h2
+      style={{
+        fontFamily: fonts.heading,
+        color: colors.primary,
+        fontSize,
+      }}
+      className="font-bold uppercase tracking-[0.16em] pb-2 mb-4 border-b"
+    >
+      {children}
+    </h2>
+  );
+}
