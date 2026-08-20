@@ -6,6 +6,8 @@ import {
   Linkedin,
   Github,
   Terminal,
+  Calendar,
+  Car,
 } from 'lucide-react';
 
 import type { CVData, ThemeColors } from '@/types/types';
@@ -17,6 +19,29 @@ interface Props {
   fontScale: number;
 }
 
+function calculateAge(birthDate: string | undefined): number | null {
+  if (!birthDate) return null;
+
+  const birth = new Date(birthDate);
+
+  if (Number.isNaN(birth.getTime())) return null;
+
+  const today = new Date();
+
+  let age = today.getFullYear() - birth.getFullYear();
+
+  const hasHadBirthday =
+    today.getMonth() > birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() &&
+      today.getDate() >= birth.getDate());
+
+  if (!hasHadBirthday) {
+    age--;
+  }
+
+  return age;
+}
+
 export default function TechTemplate({
   data,
   colors,
@@ -25,6 +50,7 @@ export default function TechTemplate({
 }: Props) {
   const fs = (n: number) => `${n * fontScale}px`;
   const hasSkills = data.skills.some((c) => c.items.length > 0);
+  const age = calculateAge(data.birthDate);
 
   return (
     <div
@@ -97,6 +123,7 @@ export default function TechTemplate({
           <a
             href={`mailto:${data.email}`}
             className="flex gap-1.5 items-center hover:underline"
+            style={{ color: 'inherit' }}
           >
             <Mail className="w-3 h-3" />
             {data.email}
@@ -107,6 +134,7 @@ export default function TechTemplate({
           <a
             href={`tel:${data.phone}`}
             className="flex gap-1.5 items-center hover:underline"
+            style={{ color: 'inherit' }}
           >
             <Phone className="w-3 h-3" />
             {data.phone}
@@ -121,10 +149,31 @@ export default function TechTemplate({
             target="_blank"
             rel="noopener noreferrer"
             className="flex gap-1.5 items-center hover:underline"
+            style={{ color: 'inherit' }}
           >
             <MapPin className="w-3 h-3" />
             {data.location}
           </a>
+        )}
+
+        {age !== null && (
+          <span
+            className="flex gap-1.5 items-center"
+            style={{ color: 'inherit' }}
+          >
+            <Calendar className="w-3 h-3" />
+            {age} ans
+          </span>
+        )}
+
+        {data.hasDrivingLicense && (
+          <span
+            className="flex gap-1.5 items-center"
+            style={{ color: 'inherit' }}
+          >
+            <Car className="w-3 h-3" />
+            Permis B
+          </span>
         )}
 
         {data.website && (
@@ -137,6 +186,7 @@ export default function TechTemplate({
             target="_blank"
             rel="noopener noreferrer"
             className="flex gap-1.5 items-center hover:underline"
+            style={{ color: 'inherit' }}
           >
             <Globe className="w-3 h-3" />
             {data.website}
@@ -153,6 +203,7 @@ export default function TechTemplate({
             target="_blank"
             rel="noopener noreferrer"
             className="flex gap-1.5 items-center hover:underline"
+            style={{ color: 'inherit' }}
           >
             <Linkedin className="w-3 h-3" />
             {data.linkedin}
@@ -169,6 +220,7 @@ export default function TechTemplate({
             target="_blank"
             rel="noopener noreferrer"
             className="flex gap-1.5 items-center hover:underline"
+            style={{ color: 'inherit' }}
           >
             <Github className="w-3 h-3" />
             {data.github}

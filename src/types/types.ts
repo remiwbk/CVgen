@@ -68,6 +68,9 @@ export interface CVData {
   interests: string[];
   style: CVStyle;
   photoScale?: number;
+  birthDate?: string;
+  hasDrivingLicense?:boolean;
+  
 }
 
 export interface ThemeColors {
@@ -112,6 +115,8 @@ export const emptyCV: CVData = {
   github: 'github.com/alexmartin',
   photo: '',
   photoScale: 1,
+  birthDate: '02/15/1990',
+  hasDrivingLicense: false,
   summary:
     "Product designer with 8+ years crafting digital experiences for startups and enterprises. I blend user research, interaction design, and systems thinking to ship products people love.",
   skills: [

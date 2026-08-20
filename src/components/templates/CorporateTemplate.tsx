@@ -6,6 +6,7 @@ import {
   Linkedin,
   Github,
   CalendarDays,
+  Car,
 } from 'lucide-react';
 
 import type { CVData, ThemeColors } from '@/types/types';
@@ -17,6 +18,31 @@ interface Props {
   fontScale: number;
 }
 
+function calculateAge(birthDate?: string): number | null {
+  if (!birthDate) return null;
+
+  const birth = new Date(birthDate);
+
+  if (Number.isNaN(birth.getTime())) {
+    return null;
+  }
+
+  const today = new Date();
+
+  let age = today.getFullYear() - birth.getFullYear();
+
+  const hasHadBirthday =
+    today.getMonth() > birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() &&
+      today.getDate() >= birth.getDate());
+
+  if (!hasHadBirthday) {
+    age--;
+  }
+
+  return age >= 0 ? age : null;
+}
+
 export default function CorporateTemplate({
   data,
   colors,
@@ -25,6 +51,7 @@ export default function CorporateTemplate({
 }: Props) {
   const fs = (n: number) => `${n * fontScale}px`;
   const hasSkills = data.skills.some((c) => c.items.length > 0);
+  const age = calculateAge(data.birthDate);
 
   return (
     <div
@@ -106,6 +133,20 @@ export default function CorporateTemplate({
                 <span className="flex items-center gap-1">
                   <MapPin className="w-3 h-3" />
                   {data.location}
+                </span>
+              )}
+
+              {age !== null && (
+                <span className="flex items-center gap-1">
+                  <CalendarDays className="w-3 h-3" />
+                  {age} ans
+                </span>
+              )}
+
+              {data.hasDrivingLicense && (
+                <span className="flex items-center gap-1">
+                  <Car className="w-3 h-3" />
+                  Permis B
                 </span>
               )}
 

@@ -45,6 +45,26 @@ function uid() {
   return Math.random().toString(36).slice(2, 9);
 }
 
+function calculateAge(birthDate: string): number | null {
+  if (!birthDate) return null;
+
+  const birth = new Date(birthDate);
+  const today = new Date();
+
+  let age = today.getFullYear() - birth.getFullYear();
+
+  const hasHadBirthday =
+    today.getMonth() > birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() &&
+      today.getDate() >= birth.getDate());
+
+  if (!hasHadBirthday) {
+    age--;
+  }
+
+  return age;
+}
+
 const inputCls =
   'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 bg-white outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 placeholder:text-slate-400';
 
@@ -1122,6 +1142,30 @@ export default function CVForm({ data, onChange }: Props) {
               }
               placeholder="alex.design"
             />
+          </div>
+
+          <div>
+            <label className={labelCls}>Date de naissance</label>
+            <input
+              type="date"
+              className={inputCls}
+              value={data.birthDate}
+              onChange={(e) => update('birthDate', e.target.value)}
+            />
+          </div>
+
+          <div className="flex items-end">
+            <label className="flex items-center gap-2 h-[38px] px-3 rounded-lg border border-slate-300 bg-white cursor-pointer hover:bg-slate-50 transition w-full">
+              <input
+                type="checkbox"
+                checked={data.hasDrivingLicense}
+                onChange={(e) => update('hasDrivingLicense', e.target.checked)}
+                className="w-4 h-4 accent-slate-900"
+              />
+              <span className="text-sm text-slate-700">
+                Permis B
+              </span>
+            </label>
           </div>
 
           <div>

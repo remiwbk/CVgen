@@ -5,6 +5,7 @@ import {
   Globe,
   Linkedin,
   Github,
+  Car,
 } from 'lucide-react';
 
 import type { CVData, ThemeColors } from '@/types/types';
@@ -16,6 +17,29 @@ interface Props {
   fontScale: number;
 }
 
+function calculateAge(birthDate: string | undefined): number | null {
+  if (!birthDate) return null;
+
+  const birth = new Date(birthDate);
+
+  if (Number.isNaN(birth.getTime())) return null;
+
+  const today = new Date();
+
+  let age = today.getFullYear() - birth.getFullYear();
+
+  const hasHadBirthday =
+    today.getMonth() > birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() &&
+      today.getDate() >= birth.getDate());
+
+  if (!hasHadBirthday) {
+    age--;
+  }
+
+  return age >= 0 ? age : null;
+}
+
 export default function ExecutiveTemplate({
   data,
   colors,
@@ -24,6 +48,7 @@ export default function ExecutiveTemplate({
 }: Props) {
   const fs = (n: number) => `${n * fontScale}px`;
   const hasSkills = data.skills.some((c) => c.items.length > 0);
+  const age = calculateAge(data.birthDate);
 
   return (
     <div
@@ -91,10 +116,6 @@ export default function ExecutiveTemplate({
           CONTACT
       ====================================================== */}
 
-      {/* =====================================================
-          CONTACT
-      ====================================================== */}
-
       <div
         className="flex flex-wrap gap-x-5 gap-y-1.5 py-3 border-y"
         style={{
@@ -106,6 +127,7 @@ export default function ExecutiveTemplate({
         {data.email && (
           <span className="flex gap-1.5 items-center">
             <Mail className="w-3 h-3" />
+
             <a
               href={`mailto:${data.email}`}
               style={{
@@ -121,6 +143,7 @@ export default function ExecutiveTemplate({
         {data.phone && (
           <span className="flex gap-1.5 items-center">
             <Phone className="w-3 h-3" />
+
             <a
               href={`tel:${data.phone}`}
               style={{
@@ -140,9 +163,23 @@ export default function ExecutiveTemplate({
           </span>
         )}
 
+        {age !== null && (
+          <span className="flex gap-1.5 items-center">
+            {age} ans
+          </span>
+        )}
+
+        {data.hasDrivingLicense && (
+          <span className="flex gap-1.5 items-center">
+            <Car className="w-3 h-3" />
+            Permis B
+          </span>
+        )}
+
         {data.website && (
           <span className="flex gap-1.5 items-center">
             <Globe className="w-3 h-3" />
+
             <a
               href={
                 data.website.startsWith('http')
@@ -164,6 +201,7 @@ export default function ExecutiveTemplate({
         {data.linkedin && (
           <span className="flex gap-1.5 items-center">
             <Linkedin className="w-3 h-3" />
+
             <a
               href={
                 data.linkedin.startsWith('http')
@@ -185,6 +223,7 @@ export default function ExecutiveTemplate({
         {data.github && (
           <span className="flex gap-1.5 items-center">
             <Github className="w-3 h-3" />
+
             <a
               href={
                 data.github.startsWith('http')

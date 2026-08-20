@@ -1,16 +1,62 @@
-import { Mail, Phone, MapPin, Globe, Linkedin, Github } from 'lucide-react';
+import {
+  Mail,
+  Phone,
+  MapPin,
+  Globe,
+  Linkedin,
+  Github,
+} from 'lucide-react';
+
 import type { CVData, ThemeColors } from '@/types/types';
 
 interface Props {
   data: CVData;
   colors: ThemeColors;
-  fonts: { heading: string; body: string };
+  fonts: {
+    heading: string;
+    body: string;
+  };
   fontScale: number;
 }
 
-export default function ClassicTemplate({ data, colors, fonts, fontScale }: Props) {
+function calculateAge(birthDate?: string): number | null {
+  if (!birthDate) return null;
+
+  const birth = new Date(birthDate);
+
+  if (Number.isNaN(birth.getTime())) {
+    return null;
+  }
+
+  const today = new Date();
+
+  let age = today.getFullYear() - birth.getFullYear();
+
+  const hasHadBirthday =
+    today.getMonth() > birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() &&
+      today.getDate() >= birth.getDate());
+
+  if (!hasHadBirthday) {
+    age--;
+  }
+
+  return age >= 0 ? age : null;
+}
+
+export default function ClassicTemplate({
+  data,
+  colors,
+  fonts,
+  fontScale,
+}: Props) {
   const fs = (n: number) => `${n * fontScale}px`;
-  const hasSkills = data.skills.some((c) => c.items.length > 0);
+
+  const hasSkills = data.skills.some(
+    (category) => category.items.length > 0
+  );
+
+  const age = calculateAge(data.birthDate);
 
   return (
     <div
@@ -23,9 +69,15 @@ export default function ClassicTemplate({ data, colors, fonts, fontScale }: Prop
     >
       <header
         className="pb-6 border-b-2 flex items-center gap-6"
-        style={{ borderColor: colors.primary }}
+        style={{
+          borderColor: colors.primary,
+        }}
       >
-        <div className={`flex-1 ${data.photo ? 'text-left' : 'text-center'}`}>
+        <div
+          className={`flex-1 ${
+            data.photo ? 'text-left' : 'text-center'
+          }`}
+        >
           <h1
             style={{
               fontFamily: fonts.heading,
@@ -38,14 +90,20 @@ export default function ClassicTemplate({ data, colors, fonts, fontScale }: Prop
           </h1>
 
           <p
-            style={{ fontSize: fs(18), color: colors.muted }}
+            style={{
+              fontSize: fs(18),
+              color: colors.muted,
+            }}
             className="mt-2 tracking-wider uppercase"
           >
             {data.title}
           </p>
 
           <div
-            style={{ fontSize: fs(12), color: colors.muted }}
+            style={{
+              fontSize: fs(12),
+              color: colors.muted,
+            }}
             className={`flex flex-wrap gap-x-5 gap-y-1 mt-3 ${
               data.photo ? '' : 'justify-center'
             }`}
@@ -76,6 +134,18 @@ export default function ClassicTemplate({ data, colors, fonts, fontScale }: Prop
               <span className="flex items-center gap-1">
                 <MapPin className="w-3 h-3" />
                 {data.location}
+              </span>
+            )}
+
+            {age !== null && (
+              <span>
+                {age} ans
+              </span>
+            )}
+
+            {data.hasDrivingLicense && (
+              <span>
+                Permis B
               </span>
             )}
 
@@ -270,7 +340,9 @@ export default function ClassicTemplate({ data, colors, fonts, fontScale }: Prop
                   </div>
 
                   <p
-                    style={{ fontSize: fs(13) }}
+                    style={{
+                      fontSize: fs(13),
+                    }}
                     className="font-medium"
                   >
                     {ed.school}
@@ -309,7 +381,10 @@ export default function ClassicTemplate({ data, colors, fonts, fontScale }: Prop
             <div className="space-y-2">
               {data.skills.map((cat) =>
                 cat.items.length > 0 ? (
-                  <div key={cat.id} className="flex gap-2">
+                  <div
+                    key={cat.id}
+                    className="flex gap-2"
+                  >
                     <span
                       style={{
                         fontSize: fs(13),
@@ -321,7 +396,9 @@ export default function ClassicTemplate({ data, colors, fonts, fontScale }: Prop
                     </span>
 
                     <span
-                      style={{ fontSize: fs(13) }}
+                      style={{
+                        fontSize: fs(13),
+                      }}
                       className="leading-relaxed"
                     >
                       {cat.items.join(' • ')}
@@ -362,6 +439,7 @@ export default function ClassicTemplate({ data, colors, fonts, fontScale }: Prop
                     {p.url && (
                       <>
                         {' — '}
+
                         <a
                           href={
                             p.url.startsWith('http')

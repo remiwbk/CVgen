@@ -5,6 +5,7 @@ import {
   Globe,
   Linkedin,
   Github,
+  Car,
 } from 'lucide-react';
 
 import type { CVData, ThemeColors } from '@/types/types';
@@ -16,6 +17,31 @@ interface Props {
   fontScale: number;
 }
 
+function calculateAge(birthDate?: string): number | null {
+  if (!birthDate) return null;
+
+  const birth = new Date(birthDate);
+
+  if (Number.isNaN(birth.getTime())) {
+    return null;
+  }
+
+  const today = new Date();
+
+  let age = today.getFullYear() - birth.getFullYear();
+
+  const hasHadBirthday =
+    today.getMonth() > birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() &&
+      today.getDate() >= birth.getDate());
+
+  if (!hasHadBirthday) {
+    age--;
+  }
+
+  return age;
+}
+
 export default function EditorialTemplate({
   data,
   colors,
@@ -24,6 +50,8 @@ export default function EditorialTemplate({
 }: Props) {
   const fs = (n: number) => `${n * fontScale}px`;
   const hasSkills = data.skills.some((c) => c.items.length > 0);
+
+  const age = calculateAge(data.birthDate);
 
   const contactItems = [
     {
@@ -78,9 +106,7 @@ export default function EditorialTemplate({
       }}
       className="w-full h-full px-11 py-10"
     >
-      {/* =====================================================
-          HEADER
-      ====================================================== */}
+      {/* HEADER */}
 
       <header
         className="grid grid-cols-[1fr_auto] gap-8 pb-7 border-b"
@@ -159,6 +185,22 @@ export default function EditorialTemplate({
                 </span>
               ) : null
             )}
+
+            {/* ÂGE */}
+            {age !== null && (
+              <span className="flex items-center gap-1.5">
+                <span aria-hidden="true">🎂</span>
+                {age} ans
+              </span>
+            )}
+
+            {/* PERMIS B */}
+            {data.hasDrivingLicense && (
+              <span className="flex gap-1.5 items-center">
+                <Car className="w-3 h-3" />
+                Permis B
+              </span>
+            )}
           </div>
         </div>
 
@@ -177,15 +219,11 @@ export default function EditorialTemplate({
         )}
       </header>
 
-      {/* =====================================================
-          CONTENT
-      ====================================================== */}
+      {/* CONTENT */}
 
       <div className="grid grid-cols-[0.72fr_1.28fr] gap-9 mt-8">
 
-        {/* ===================================================
-            LEFT COLUMN
-        ==================================================== */}
+        {/* LEFT COLUMN */}
 
         <aside className="space-y-7">
 
@@ -283,9 +321,7 @@ export default function EditorialTemplate({
           )}
         </aside>
 
-        {/* ===================================================
-            RIGHT COLUMN
-        ==================================================== */}
+        {/* RIGHT COLUMN */}
 
         <main className="space-y-7">
 
@@ -497,12 +533,6 @@ export default function EditorialTemplate({
     </div>
   );
 }
-
-/**
- * =========================================================
- * SECTION TITLE
- * =========================================================
- */
 
 function SectionTitle({
   children,
