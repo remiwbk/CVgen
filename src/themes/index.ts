@@ -261,43 +261,132 @@ export function resolveFontStack(
 export const colorPresets: {
   name: string;
   primary: string;
+  secondary: string;
   accent: string;
+  text: string;
+  muted: string;
+  surface: string;
+  border: string;
 }[] = [
 
+  // -----------------------------------------------------------
+  // OCEAN
+  // -----------------------------------------------------------
+
   {
-    name: 'Teal',
-    primary: '#0f766e',
-    accent: '#f59e0b',
+    name: 'Ocean',
+    primary: '#0F766E',
+    secondary: '#134E4A',
+    accent: '#F59E0B',
+    text: '#0F172A',
+    muted: '#64748B',
+    surface: '#F0FDFA',
+    border: '#CCFBF1',
   },
+
+  // -----------------------------------------------------------
+  // NAVY
+  // -----------------------------------------------------------
 
   {
     name: 'Navy',
-    primary: '#1e3a5f',
-    accent: '#b45309',
+    primary: '#1E3A5F',
+    secondary: '#0F2540',
+    accent: '#D97706',
+    text: '#172033',
+    muted: '#64748B',
+    surface: '#F5F8FC',
+    border: '#D6E0EB',
   },
+
+  // -----------------------------------------------------------
+  // SLATE
+  // -----------------------------------------------------------
 
   {
     name: 'Slate',
-    primary: '#111827',
-    accent: '#2563eb',
+    primary: '#1E293B',
+    secondary: '#334155',
+    accent: '#2563EB',
+    text: '#0F172A',
+    muted: '#64748B',
+    surface: '#F8FAFC',
+    border: '#E2E8F0',
   },
+
+  // -----------------------------------------------------------
+  // FOREST
+  // -----------------------------------------------------------
 
   {
     name: 'Forest',
     primary: '#166534',
-    accent: '#ca8a04',
+    secondary: '#14532D',
+    accent: '#CA8A04',
+    text: '#172116',
+    muted: '#647064',
+    surface: '#F3F8F3',
+    border: '#D5E5D6',
   },
+
+  // -----------------------------------------------------------
+  // PLUM
+  // -----------------------------------------------------------
 
   {
     name: 'Plum',
-    primary: '#7c2d12',
-    accent: '#0ea5e9',
+    primary: '#6B21A8',
+    secondary: '#581C87',
+    accent: '#0891B2',
+    text: '#24152F',
+    muted: '#6B7280',
+    surface: '#FAF5FF',
+    border: '#E9D5FF',
   },
+
+  // -----------------------------------------------------------
+  // CRIMSON
+  // -----------------------------------------------------------
 
   {
     name: 'Crimson',
-    primary: '#991b1b',
-    accent: '#0891b2',
+    primary: '#991B1B',
+    secondary: '#7F1D1D',
+    accent: '#0E7490',
+    text: '#2A1515',
+    muted: '#6B7280',
+    surface: '#FEF2F2',
+    border: '#FECACA',
+  },
+
+  // -----------------------------------------------------------
+  // CHARCOAL
+  // -----------------------------------------------------------
+
+  {
+    name: 'Charcoal',
+    primary: '#18181B',
+    secondary: '#3F3F46',
+    accent: '#B08D57',
+    text: '#18181B',
+    muted: '#71717A',
+    surface: '#FAFAFA',
+    border: '#E4E4E7',
+  },
+
+  // -----------------------------------------------------------
+  // INDIGO
+  // -----------------------------------------------------------
+
+  {
+    name: 'Indigo',
+    primary: '#3730A3',
+    secondary: '#312E81',
+    accent: '#7C3AED',
+    text: '#1E1B4B',
+    muted: '#6B7280',
+    surface: '#F5F3FF',
+    border: '#DDD6FE',
   },
 
 ];

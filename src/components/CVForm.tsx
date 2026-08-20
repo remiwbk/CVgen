@@ -138,14 +138,8 @@ export default function CVForm({
    * =========================
    * DND-KIT SENSORS
    * =========================
-   *
-   * PointerSensor = souris / trackpad
-   * TouchSensor   = téléphone / tablette
-   *
-   * Le délai du TouchSensor évite qu'un simple
-   * appui sur un élément déclenche immédiatement
-   * un déplacement.
    */
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -559,7 +553,7 @@ export default function CVForm({
                   [field]: value,
                 }
               : x
-        )
+          )
       );
     },
   };
@@ -740,7 +734,12 @@ export default function CVForm({
                 onClick={() =>
                   updateStyle({
                     primary: p.primary,
+                    secondary: p.secondary,
                     accent: p.accent,
+                    text: p.text,
+                    muted: p.muted,
+                    surface: p.surface,
+                    border: p.border,
                   })
                 }
                 title={p.name}
@@ -1170,7 +1169,7 @@ export default function CVForm({
           </label>
 
           <textarea
-            className={`${inputCls} resize-none`}
+            className={`${inputCls} resize-y`}
             rows={3}
             value={data.summary}
             onChange={(e) =>
@@ -1253,9 +1252,6 @@ export default function CVForm({
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          ref={
-                            undefined
-                          }
                           {...attributes}
                           {...listeners}
                           className="cursor-grab active:cursor-grabbing touch-none shrink-0 p-1 -ml-1 rounded hover:bg-slate-200"
@@ -1559,7 +1555,7 @@ export default function CVForm({
                         />
 
                         <textarea
-                          className={`${inputCls} resize-none`}
+                          className={`${inputCls} resize-y min-h-[60px]`}
                           rows={2}
                           value={
                             exp.description
@@ -1761,7 +1757,7 @@ export default function CVForm({
                         />
 
                         <textarea
-                          className={`${inputCls} resize-none`}
+                          className={`${inputCls} resize-y min-h-[60px]`}
                           rows={2}
                           value={
                             ed.description
@@ -1944,7 +1940,7 @@ export default function CVForm({
                         </div>
 
                         <textarea
-                          className={`${inputCls} resize-none`}
+                          className={`${inputCls} resize-y min-h-[60px]`}
                           rows={2}
                           value={
                             p.description
