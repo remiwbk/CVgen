@@ -115,7 +115,7 @@ export const emptyCV: CVData = {
   github: 'github.com/alexmartin',
   photo: '/images/portrait.jpg',
   photoScale: 1.5,
-  birthDate: '02/15/1990',
+  birthDate: '1990-02-15',
   hasDrivingLicense: false,
   summary:
     "Product designer with 8+ years crafting digital experiences for startups and enterprises. I blend user research, interaction design, and systems thinking to ship products people love.",
