@@ -1,4 +1,23 @@
 import { useState } from 'react';
+
+import {
+  DndContext,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+
+import { CSS } from '@dnd-kit/utilities';
+
 import {
   Plus,
   Trash2,
@@ -28,17 +47,52 @@ interface Props {
   onChange: (data: CVData) => void;
 }
 
-type DragSection =
-  | 'skills'
-  | 'experiences'
-  | 'education'
-  | 'projects';
+type SortableRenderProps = {
+  setNodeRef: (node: HTMLElement | null) => void;
+  style: React.CSSProperties;
+  attributes: Record<string, any>;
+  listeners: Record<string, any> | undefined;
+  isDragging: boolean;
+};
 
-type DropPosition = 'before' | 'after';
-
-interface DropTarget {
+interface SortableItemProps {
   id: string;
-  position: DropPosition;
+  children: (props: SortableRenderProps) => React.ReactNode;
+}
+
+function SortableItem({
+  id,
+  children,
+}: SortableItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id,
+  });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    position: 'relative',
+  };
+
+  return (
+    <>
+      {children({
+        setNodeRef,
+        style,
+        attributes,
+        listeners,
+        isDragging,
+      })}
+    </>
+  );
 }
 
 function uid() {
@@ -51,7 +105,9 @@ function calculateAge(birthDate: string): number | null {
   const birth = new Date(birthDate);
   const today = new Date();
 
-  let age = today.getFullYear() - birth.getFullYear();
+  let age =
+    today.getFullYear() -
+    birth.getFullYear();
 
   const hasHadBirthday =
     today.getMonth() > birth.getMonth() ||
@@ -71,31 +127,38 @@ const inputCls =
 const labelCls =
   'block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide';
 
-export default function CVForm({ data, onChange }: Props) {
-  /*
-   * =========================
-   * DRAG & DROP STATE
-   * =========================
-   */
-
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-
-  const [draggedSection, setDraggedSection] =
-    useState<DragSection | null>(null);
+export default function CVForm({
+  data,
+  onChange,
+}: Props) {
+  const [draggedId, setDraggedId] =
+    useState<string | null>(null);
 
   /*
-   * Élément actuellement survolé + position
+   * =========================
+   * DND-KIT SENSORS
+   * =========================
    *
-   * Exemple :
-   * {
-   *   id: "abc123",
-   *   position: "before"
-   * }
+   * PointerSensor = souris / trackpad
+   * TouchSensor   = téléphone / tablette
    *
-   * => la ligne apparaît avant cet élément.
+   * Le délai du TouchSensor évite qu'un simple
+   * appui sur un élément déclenche immédiatement
+   * un déplacement.
    */
-  const [dropTarget, setDropTarget] =
-    useState<DropTarget | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 6,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 180,
+        tolerance: 8,
+      },
+    })
+  );
 
   const update = <K extends keyof CVData>(
     key: K,
@@ -121,71 +184,67 @@ export default function CVForm({ data, onChange }: Props) {
 
   /*
    * =========================
-   * DRAG & DROP
+   * DRAG END
    * =========================
    */
 
-  const startDrag = (
-    id: string,
-    section: DragSection
+  const handleSortEnd = (
+    event: DragEndEvent,
+    section:
+      | 'skills'
+      | 'experiences'
+      | 'education'
+      | 'projects'
   ) => {
-    setDraggedId(id);
-    setDraggedSection(section);
-    setDropTarget(null);
-  };
+    const {
+      active,
+      over,
+    } = event;
 
-  const handleDragOver = (
-    e: React.DragEvent<HTMLDivElement>,
-    targetId: string,
-    section: DragSection
-  ) => {
-    if (
-      !draggedId ||
-      !draggedSection ||
-      draggedSection !== section
-    ) {
-      return;
-    }
-
-    e.preventDefault();
-
-    e.dataTransfer.dropEffect = 'move';
-
-    /*
-     * On regarde si la souris est dans la moitié
-     * supérieure ou inférieure de l'élément.
-     */
-    const rect =
-      e.currentTarget.getBoundingClientRect();
-
-    const middleY =
-      rect.top + rect.height / 2;
-
-    const position: DropPosition =
-      e.clientY < middleY
-        ? 'before'
-        : 'after';
-
-    /*
-     * Si on est en train de survoler l'élément
-     * qu'on déplace lui-même, on ne montre pas
-     * de ligne.
-     */
-    if (targetId === draggedId) {
-      setDropTarget(null);
-      return;
-    }
-
-    setDropTarget({
-      id: targetId,
-      position,
-    });
-  };
-
-  const endDrag = () => {
     setDraggedId(null);
-    setDraggedSection(null);
-    setDropTarget(null);
+
+    if (!over) {
+      return;
+    }
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+
+    if (activeId === overId) {
+      return;
+    }
+
+    if (section === 'skills') {
+      moveSkillCategory(
+        activeId,
+        overId
+      );
+      return;
+    }
+
+    moveArrayItem(
+      section,
+      activeId,
+      overId
+    );
+  };
+
+  /*
+   * =========================
+   * DRAG START
+   * =========================
+   */
+
+  const handleDragStart = (
+    event: any
+  ) => {
+    setDraggedId(
+      String(event.active.id)
+    );
+  };
+
+  const handleDragCancel = () => {
+    setDraggedId(null);
   };
 
   /*
@@ -200,8 +259,7 @@ export default function CVForm({ data, onChange }: Props) {
       | 'education'
       | 'projects',
     draggedItemId: string,
-    targetItemId: string,
-    position: DropPosition
+    targetItemId: string
   ) => {
     if (
       !draggedItemId ||
@@ -213,15 +271,17 @@ export default function CVForm({ data, onChange }: Props) {
     if (key === 'experiences') {
       const items = [...data.experiences];
 
-      const fromIndex = items.findIndex(
-        (item) =>
-          item.id === draggedItemId
-      );
+      const fromIndex =
+        items.findIndex(
+          (item) =>
+            item.id === draggedItemId
+        );
 
-      const targetIndex = items.findIndex(
-        (item) =>
-          item.id === targetItemId
-      );
+      const targetIndex =
+        items.findIndex(
+          (item) =>
+            item.id === targetItemId
+        );
 
       if (
         fromIndex === -1 ||
@@ -233,22 +293,8 @@ export default function CVForm({ data, onChange }: Props) {
       const [movedItem] =
         items.splice(fromIndex, 1);
 
-      /*
-       * Après avoir retiré l'élément déplacé,
-       * l'index de la cible peut avoir changé.
-       */
-      let insertIndex = targetIndex;
-
-      if (fromIndex < targetIndex) {
-        insertIndex -= 1;
-      }
-
-      if (position === 'after') {
-        insertIndex += 1;
-      }
-
       items.splice(
-        Math.max(0, insertIndex),
+        targetIndex,
         0,
         movedItem
       );
@@ -264,15 +310,17 @@ export default function CVForm({ data, onChange }: Props) {
     if (key === 'education') {
       const items = [...data.education];
 
-      const fromIndex = items.findIndex(
-        (item) =>
-          item.id === draggedItemId
-      );
+      const fromIndex =
+        items.findIndex(
+          (item) =>
+            item.id === draggedItemId
+        );
 
-      const targetIndex = items.findIndex(
-        (item) =>
-          item.id === targetItemId
-      );
+      const targetIndex =
+        items.findIndex(
+          (item) =>
+            item.id === targetItemId
+        );
 
       if (
         fromIndex === -1 ||
@@ -284,18 +332,8 @@ export default function CVForm({ data, onChange }: Props) {
       const [movedItem] =
         items.splice(fromIndex, 1);
 
-      let insertIndex = targetIndex;
-
-      if (fromIndex < targetIndex) {
-        insertIndex -= 1;
-      }
-
-      if (position === 'after') {
-        insertIndex += 1;
-      }
-
       items.splice(
-        Math.max(0, insertIndex),
+        targetIndex,
         0,
         movedItem
       );
@@ -311,15 +349,17 @@ export default function CVForm({ data, onChange }: Props) {
     if (key === 'projects') {
       const items = [...data.projects];
 
-      const fromIndex = items.findIndex(
-        (item) =>
-          item.id === draggedItemId
-      );
+      const fromIndex =
+        items.findIndex(
+          (item) =>
+            item.id === draggedItemId
+        );
 
-      const targetIndex = items.findIndex(
-        (item) =>
-          item.id === targetItemId
-      );
+      const targetIndex =
+        items.findIndex(
+          (item) =>
+            item.id === targetItemId
+        );
 
       if (
         fromIndex === -1 ||
@@ -331,18 +371,8 @@ export default function CVForm({ data, onChange }: Props) {
       const [movedItem] =
         items.splice(fromIndex, 1);
 
-      let insertIndex = targetIndex;
-
-      if (fromIndex < targetIndex) {
-        insertIndex -= 1;
-      }
-
-      if (position === 'after') {
-        insertIndex += 1;
-      }
-
       items.splice(
-        Math.max(0, insertIndex),
+        targetIndex,
         0,
         movedItem
       );
@@ -362,8 +392,7 @@ export default function CVForm({ data, onChange }: Props) {
 
   const moveSkillCategory = (
     draggedItemId: string,
-    targetItemId: string,
-    position: DropPosition
+    targetItemId: string
   ) => {
     if (
       !draggedItemId ||
@@ -374,15 +403,17 @@ export default function CVForm({ data, onChange }: Props) {
 
     const items = [...data.skills];
 
-    const fromIndex = items.findIndex(
-      (item) =>
-        item.id === draggedItemId
-    );
+    const fromIndex =
+      items.findIndex(
+        (item) =>
+          item.id === draggedItemId
+      );
 
-    const targetIndex = items.findIndex(
-      (item) =>
-        item.id === targetItemId
-    );
+    const targetIndex =
+      items.findIndex(
+        (item) =>
+          item.id === targetItemId
+      );
 
     if (
       fromIndex === -1 ||
@@ -394,70 +425,13 @@ export default function CVForm({ data, onChange }: Props) {
     const [movedItem] =
       items.splice(fromIndex, 1);
 
-    let insertIndex = targetIndex;
-
-    if (fromIndex < targetIndex) {
-      insertIndex -= 1;
-    }
-
-    if (position === 'after') {
-      insertIndex += 1;
-    }
-
     items.splice(
-      Math.max(0, insertIndex),
+      targetIndex,
       0,
       movedItem
     );
 
     update('skills', items);
-  };
-
-  /*
-   * =========================
-   * HANDLE DROP
-   * =========================
-   */
-
-  const handleDrop = (
-    targetId: string,
-    section: DragSection
-  ) => {
-    if (
-      !draggedId ||
-      !draggedSection ||
-      draggedSection !== section ||
-      !dropTarget
-    ) {
-      endDrag();
-      return;
-    }
-
-    /*
-     * On utilise la position calculée pendant
-     * le drag plutôt que simplement l'élément cible.
-     */
-    const position =
-      dropTarget.id === targetId
-        ? dropTarget.position
-        : 'before';
-
-    if (section === 'skills') {
-      moveSkillCategory(
-        draggedId,
-        targetId,
-        position
-      );
-    } else {
-      moveArrayItem(
-        section,
-        draggedId,
-        targetId,
-        position
-      );
-    }
-
-    endDrag();
   };
 
   /*
@@ -672,43 +646,6 @@ export default function CVForm({ data, onChange }: Props) {
             : c
         )
       ),
-  };
-
-  /*
-   * =========================
-   * DROP LINE COMPONENT
-   * =========================
-   */
-
-  const DropLine = ({
-    id,
-    position,
-  }: {
-    id: string;
-    position: DropPosition;
-  }) => {
-    if (
-      !dropTarget ||
-      dropTarget.id !== id ||
-      dropTarget.position !== position
-    ) {
-      return null;
-    }
-
-    return (
-      <div className="relative h-0">
-        <div
-          className={`absolute left-0 right-0 h-0.5 bg-slate-900 z-20 pointer-events-none ${
-            position === 'before'
-              ? '-top-1'
-              : 'top-1'
-          }`}
-        >
-          <div className="absolute -left-1 -top-1 w-2 h-2 rounded-full bg-slate-900" />
-          <div className="absolute -right-1 -top-1 w-2 h-2 rounded-full bg-slate-900" />
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -1145,12 +1082,20 @@ export default function CVForm({ data, onChange }: Props) {
           </div>
 
           <div>
-            <label className={labelCls}>Date de naissance</label>
+            <label className={labelCls}>
+              Date de naissance
+            </label>
+
             <input
               type="date"
               className={inputCls}
               value={data.birthDate}
-              onChange={(e) => update('birthDate', e.target.value)}
+              onChange={(e) =>
+                update(
+                  'birthDate',
+                  e.target.value
+                )
+              }
             />
           </div>
 
@@ -1158,10 +1103,18 @@ export default function CVForm({ data, onChange }: Props) {
             <label className="flex items-center gap-2 h-[38px] px-3 rounded-lg border border-slate-300 bg-white cursor-pointer hover:bg-slate-50 transition w-full">
               <input
                 type="checkbox"
-                checked={data.hasDrivingLicense}
-                onChange={(e) => update('hasDrivingLicense', e.target.checked)}
+                checked={
+                  data.hasDrivingLicense
+                }
+                onChange={(e) =>
+                  update(
+                    'hasDrivingLicense',
+                    e.target.checked
+                  )
+                }
                 className="w-4 h-4 accent-slate-900"
               />
+
               <span className="text-sm text-slate-700">
                 Permis B
               </span>
@@ -1253,166 +1206,180 @@ export default function CVForm({ data, onChange }: Props) {
           </button>
         </div>
 
-        <div className="space-y-3">
-          {data.skills.map((cat) => (
-            <div key={cat.id}>
-              <DropLine
-                id={cat.id}
-                position="before"
-              />
-
-              <div
-                onDragOver={(e) =>
-                  handleDragOver(
-                    e,
-                    cat.id,
-                    'skills'
-                  )
-                }
-                onDrop={(e) => {
-                  e.preventDefault();
-
-                  handleDrop(
-                    cat.id,
-                    'skills'
-                  );
-                }}
-                className={`relative rounded-xl border border-slate-200 p-3 space-y-2.5 bg-slate-50/60 transition ${
-                  draggedId === cat.id
-                    ? 'opacity-50 scale-[0.99]'
-                    : 'hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <div
-                    draggable
-                    onDragStart={(e) => {
-                      e.stopPropagation();
-
-                      e.dataTransfer.effectAllowed =
-                        'move';
-
-                      startDrag(
-                        cat.id,
-                        'skills'
-                      );
-                    }}
-                    onDragEnd={endDrag}
-                    className="cursor-grab active:cursor-grabbing touch-none shrink-0"
-                    title="Déplacer la catégorie"
-                  >
-                    <GripVertical
-                      className={`w-4 h-4 ${
-                        draggedId === cat.id
-                          ? 'text-slate-900'
-                          : 'text-slate-300 hover:text-slate-600'
+        <DndContext
+          sensors={sensors}
+          collisionDetection={
+            closestCenter
+          }
+          onDragStart={handleDragStart}
+          onDragCancel={handleDragCancel}
+          onDragEnd={(event) =>
+            handleSortEnd(
+              event,
+              'skills'
+            )
+          }
+        >
+          <SortableContext
+            items={data.skills.map(
+              (cat) => cat.id
+            )}
+            strategy={
+              verticalListSortingStrategy
+            }
+          >
+            <div className="space-y-3">
+              {data.skills.map((cat) => (
+                <SortableItem
+                  key={cat.id}
+                  id={cat.id}
+                >
+                  {({
+                    setNodeRef,
+                    style,
+                    attributes,
+                    listeners,
+                    isDragging,
+                  }) => (
+                    <div
+                      ref={setNodeRef}
+                      style={style}
+                      className={`relative rounded-xl border border-slate-200 p-3 space-y-2.5 bg-slate-50/60 transition ${
+                        isDragging
+                          ? 'opacity-60 shadow-xl scale-[1.01] z-50'
+                          : 'hover:border-slate-300'
                       }`}
-                    />
-                  </div>
+                    >
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          ref={
+                            undefined
+                          }
+                          {...attributes}
+                          {...listeners}
+                          className="cursor-grab active:cursor-grabbing touch-none shrink-0 p-1 -ml-1 rounded hover:bg-slate-200"
+                          title="Déplacer la catégorie"
+                          aria-label="Déplacer la catégorie"
+                        >
+                          <GripVertical
+                            className={`w-4 h-4 ${
+                              isDragging
+                                ? 'text-slate-900'
+                                : 'text-slate-300 hover:text-slate-600'
+                            }`}
+                          />
+                        </button>
 
-                  <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                        <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
 
-                  <input
-                    className={`${inputCls} font-semibold`}
-                    value={cat.name}
-                    onChange={(e) =>
-                      skillOps.renameCategory(
-                        cat.id,
-                        e.target.value
-                      )
-                    }
-                    placeholder="Nom de la catégorie"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      skillOps.removeCategory(
-                        cat.id
-                      )
-                    }
-                    className="text-slate-400 hover:text-red-500 transition shrink-0"
-                    aria-label="Supprimer la catégorie"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="flex flex-wrap gap-1.5 pl-6">
-                  {cat.items.map(
-                    (item, i) => (
-                      <span
-                        key={`${cat.id}-${i}`}
-                        className="inline-flex items-center gap-1 rounded-md bg-white border border-slate-200 pl-2 pr-1 py-0.5 text-xs text-slate-700"
-                      >
-                        {item}
+                        <input
+                          className={`${inputCls} font-semibold`}
+                          value={cat.name}
+                          onChange={(e) =>
+                            skillOps.renameCategory(
+                              cat.id,
+                              e.target.value
+                            )
+                          }
+                          placeholder="Nom de la catégorie"
+                        />
 
                         <button
                           type="button"
                           onClick={() =>
-                            skillOps.removeItem(
-                              cat.id,
-                              i
+                            skillOps.removeCategory(
+                              cat.id
                             )
                           }
-                          className="rounded p-0.5 hover:bg-slate-200 text-slate-400"
-                          aria-label="Supprimer"
+                          className="text-slate-400 hover:text-red-500 transition shrink-0"
+                          aria-label="Supprimer la catégorie"
                         >
-                          <X className="w-3 h-3" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
-                      </span>
-                    )
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5 pl-6">
+                        {cat.items.map(
+                          (
+                            item,
+                            i
+                          ) => (
+                            <span
+                              key={`${cat.id}-${i}`}
+                              className="inline-flex items-center gap-1 rounded-md bg-white border border-slate-200 pl-2 pr-1 py-0.5 text-xs text-slate-700"
+                            >
+                              {item}
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  skillOps.removeItem(
+                                    cat.id,
+                                    i
+                                  )
+                                }
+                                className="rounded p-0.5 hover:bg-slate-200 text-slate-400"
+                                aria-label="Supprimer"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          )
+                        )}
+                      </div>
+
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+
+                          const input =
+                            e.currentTarget.elements.namedItem(
+                              'item'
+                            ) as HTMLInputElement;
+
+                          skillOps.addItem(
+                            cat.id,
+                            input.value
+                          );
+
+                          input.value =
+                            '';
+                        }}
+                        className="flex gap-2 pl-6"
+                      >
+                        <input
+                          name="item"
+                          className={
+                            inputCls
+                          }
+                          placeholder="Ajouter un élément (ex: Linux)"
+                        />
+
+                        <button
+                          type="submit"
+                          className="shrink-0 rounded-lg bg-slate-200 px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-300 transition flex items-center gap-1"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </form>
+                    </div>
                   )}
-                </div>
+                </SortableItem>
+              ))}
 
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-
-                    const input =
-                      e.currentTarget.elements.namedItem(
-                        'item'
-                      ) as HTMLInputElement;
-
-                    skillOps.addItem(
-                      cat.id,
-                      input.value
-                    );
-
-                    input.value = '';
-                  }}
-                  className="flex gap-2 pl-6"
-                >
-                  <input
-                    name="item"
-                    className={inputCls}
-                    placeholder="Ajouter un élément (ex: Linux)"
-                  />
-
-                  <button
-                    type="submit"
-                    className="shrink-0 rounded-lg bg-slate-200 px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-300 transition flex items-center gap-1"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                </form>
-              </div>
-
-              <DropLine
-                id={cat.id}
-                position="after"
-              />
+              {data.skills.length ===
+                0 && (
+                <p className="text-xs text-slate-400 italic">
+                  Aucune catégorie.
+                  Cliquez sur «
+                  Catégorie » pour
+                  commencer.
+                </p>
+              )}
             </div>
-          ))}
-
-          {data.skills.length === 0 && (
-            <p className="text-xs text-slate-400 italic">
-              Aucune catégorie. Cliquez
-              sur « Catégorie » pour
-              commencer.
-            </p>
-          )}
-        </div>
+          </SortableContext>
+        </DndContext>
       </section>
 
       {/* =========================
@@ -1447,151 +1414,174 @@ export default function CVForm({ data, onChange }: Props) {
           </button>
         </div>
 
-        <div className="space-y-3">
-          {data.experiences.map(
-            (exp) => (
-              <div key={exp.id}>
-                <DropLine
-                  id={exp.id}
-                  position="before"
-                />
-
-                <div
-                  onDragOver={(e) =>
-                    handleDragOver(
-                      e,
-                      exp.id,
-                      'experiences'
-                    )
-                  }
-                  onDrop={(e) => {
-                    e.preventDefault();
-
-                    handleDrop(
-                      exp.id,
-                      'experiences'
-                    );
-                  }}
-                  className={`relative rounded-xl border border-slate-200 p-3 space-y-2 bg-slate-50/60 transition ${
-                    draggedId === exp.id
-                      ? 'opacity-50 scale-[0.99]'
-                      : 'hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div
-                      draggable
-                      onDragStart={(e) => {
-                        e.stopPropagation();
-
-                        e.dataTransfer.effectAllowed =
-                          'move';
-
-                        startDrag(
-                          exp.id,
-                          'experiences'
-                        );
-                      }}
-                      onDragEnd={endDrag}
-                      className="mt-2 cursor-grab active:cursor-grabbing touch-none shrink-0"
-                      title="Déplacer l'expérience"
-                    >
-                      <GripVertical
-                        className={`w-4 h-4 ${
-                          draggedId === exp.id
-                            ? 'text-slate-900'
-                            : 'text-slate-300 hover:text-slate-600'
-                        }`}
-                      />
-                    </div>
-
-                    <div className="flex-1 grid grid-cols-2 gap-2">
-                      <input
-                        className={inputCls}
-                        value={exp.role}
-                        onChange={(e) =>
-                          arrayOps.patch(
-                            'experiences',
-                            exp.id,
-                            'role',
-                            e.target.value
-                          )
-                        }
-                        placeholder="Poste"
-                      />
-
-                      <input
-                        className={inputCls}
-                        value={
-                          exp.company
-                        }
-                        onChange={(e) =>
-                          arrayOps.patch(
-                            'experiences',
-                            exp.id,
-                            'company',
-                            e.target.value
-                          )
-                        }
-                        placeholder="Entreprise"
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        arrayOps.remove(
-                          'experiences',
-                          exp.id
-                        )
-                      }
-                      className="mt-2 text-slate-400 hover:text-red-500 transition"
-                      aria-label="Supprimer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <input
-                    className={inputCls}
-                    value={exp.period}
-                    onChange={(e) =>
-                      arrayOps.patch(
-                        'experiences',
-                        exp.id,
-                        'period',
-                        e.target.value
-                      )
-                    }
-                    placeholder="Période (ex: 2021 — Present)"
-                  />
-
-                  <textarea
-                    className={`${inputCls} resize-none`}
-                    rows={2}
-                    value={
-                      exp.description
-                    }
-                    onChange={(e) =>
-                      arrayOps.patch(
-                        'experiences',
-                        exp.id,
-                        'description',
-                        e.target.value
-                      )
-                    }
-                    placeholder="Description des missions et résultats"
-                  />
-                </div>
-
-                <DropLine
-                  id={exp.id}
-                  position="after"
-                />
-              </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={
+            closestCenter
+          }
+          onDragStart={handleDragStart}
+          onDragCancel={handleDragCancel}
+          onDragEnd={(event) =>
+            handleSortEnd(
+              event,
+              'experiences'
             )
-          )}
-        </div>
+          }
+        >
+          <SortableContext
+            items={data.experiences.map(
+              (exp) => exp.id
+            )}
+            strategy={
+              verticalListSortingStrategy
+            }
+          >
+            <div className="space-y-3">
+              {data.experiences.map(
+                (exp) => (
+                  <SortableItem
+                    key={exp.id}
+                    id={exp.id}
+                  >
+                    {({
+                      setNodeRef,
+                      style,
+                      attributes,
+                      listeners,
+                      isDragging,
+                    }) => (
+                      <div
+                        ref={
+                          setNodeRef
+                        }
+                        style={style}
+                        className={`relative rounded-xl border border-slate-200 p-3 space-y-2 bg-slate-50/60 transition ${
+                          isDragging
+                            ? 'opacity-60 shadow-xl scale-[1.01] z-50'
+                            : 'hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <button
+                            type="button"
+                            {...attributes}
+                            {...listeners}
+                            className="mt-2 cursor-grab active:cursor-grabbing touch-none shrink-0 p-1 -ml-1 rounded hover:bg-slate-200"
+                            title="Déplacer l'expérience"
+                            aria-label="Déplacer l'expérience"
+                          >
+                            <GripVertical
+                              className={`w-4 h-4 ${
+                                isDragging
+                                  ? 'text-slate-900'
+                                  : 'text-slate-300 hover:text-slate-600'
+                              }`}
+                            />
+                          </button>
+
+                          <div className="flex-1 grid grid-cols-2 gap-2">
+                            <input
+                              className={
+                                inputCls
+                              }
+                              value={
+                                exp.role
+                              }
+                              onChange={(
+                                e
+                              ) =>
+                                arrayOps.patch(
+                                  'experiences',
+                                  exp.id,
+                                  'role',
+                                  e
+                                    .target
+                                    .value
+                                )
+                              }
+                              placeholder="Poste"
+                            />
+
+                            <input
+                              className={
+                                inputCls
+                              }
+                              value={
+                                exp.company
+                              }
+                              onChange={(
+                                e
+                              ) =>
+                                arrayOps.patch(
+                                  'experiences',
+                                  exp.id,
+                                  'company',
+                                  e
+                                    .target
+                                    .value
+                                )
+                              }
+                              placeholder="Entreprise"
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              arrayOps.remove(
+                                'experiences',
+                                exp.id
+                              )
+                            }
+                            className="mt-2 text-slate-400 hover:text-red-500 transition"
+                            aria-label="Supprimer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        <input
+                          className={
+                            inputCls
+                          }
+                          value={
+                            exp.period
+                          }
+                          onChange={(e) =>
+                            arrayOps.patch(
+                              'experiences',
+                              exp.id,
+                              'period',
+                              e.target.value
+                            )
+                          }
+                          placeholder="Période (ex: 2021 — Present)"
+                        />
+
+                        <textarea
+                          className={`${inputCls} resize-none`}
+                          rows={2}
+                          value={
+                            exp.description
+                          }
+                          onChange={(e) =>
+                            arrayOps.patch(
+                              'experiences',
+                              exp.id,
+                              'description',
+                              e.target.value
+                            )
+                          }
+                          placeholder="Description des missions et résultats"
+                        />
+                      </div>
+                    )}
+                  </SortableItem>
+                )
+              )}
+            </div>
+          </SortableContext>
+        </DndContext>
       </section>
 
       {/* =========================
@@ -1626,149 +1616,174 @@ export default function CVForm({ data, onChange }: Props) {
           </button>
         </div>
 
-        <div className="space-y-3">
-          {data.education.map(
-            (ed) => (
-              <div key={ed.id}>
-                <DropLine
-                  id={ed.id}
-                  position="before"
-                />
-
-                <div
-                  onDragOver={(e) =>
-                    handleDragOver(
-                      e,
-                      ed.id,
-                      'education'
-                    )
-                  }
-                  onDrop={(e) => {
-                    e.preventDefault();
-
-                    handleDrop(
-                      ed.id,
-                      'education'
-                    );
-                  }}
-                  className={`relative rounded-xl border border-slate-200 p-3 space-y-2 bg-slate-50/60 transition ${
-                    draggedId === ed.id
-                      ? 'opacity-50 scale-[0.99]'
-                      : 'hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div
-                      draggable
-                      onDragStart={(e) => {
-                        e.stopPropagation();
-
-                        e.dataTransfer.effectAllowed =
-                          'move';
-
-                        startDrag(
-                          ed.id,
-                          'education'
-                        );
-                      }}
-                      onDragEnd={endDrag}
-                      className="mt-2 cursor-grab active:cursor-grabbing touch-none shrink-0"
-                      title="Déplacer la formation"
-                    >
-                      <GripVertical
-                        className={`w-4 h-4 ${
-                          draggedId === ed.id
-                            ? 'text-slate-900'
-                            : 'text-slate-300 hover:text-slate-600'
-                        }`}
-                      />
-                    </div>
-
-                    <div className="flex-1 grid grid-cols-2 gap-2">
-                      <input
-                        className={inputCls}
-                        value={ed.degree}
-                        onChange={(e) =>
-                          arrayOps.patch(
-                            'education',
-                            ed.id,
-                            'degree',
-                            e.target.value
-                          )
-                        }
-                        placeholder="Diplôme"
-                      />
-
-                      <input
-                        className={inputCls}
-                        value={ed.school}
-                        onChange={(e) =>
-                          arrayOps.patch(
-                            'education',
-                            ed.id,
-                            'school',
-                            e.target.value
-                          )
-                        }
-                        placeholder="Établissement"
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        arrayOps.remove(
-                          'education',
-                          ed.id
-                        )
-                      }
-                      className="mt-2 text-slate-400 hover:text-red-500 transition"
-                      aria-label="Supprimer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <input
-                    className={inputCls}
-                    value={ed.period}
-                    onChange={(e) =>
-                      arrayOps.patch(
-                        'education',
-                        ed.id,
-                        'period',
-                        e.target.value
-                      )
-                    }
-                    placeholder="Période"
-                  />
-
-                  <textarea
-                    className={`${inputCls} resize-none`}
-                    rows={2}
-                    value={
-                      ed.description
-                    }
-                    onChange={(e) =>
-                      arrayOps.patch(
-                        'education',
-                        ed.id,
-                        'description',
-                        e.target.value
-                      )
-                    }
-                    placeholder="Description (optionnelle)"
-                  />
-                </div>
-
-                <DropLine
-                  id={ed.id}
-                  position="after"
-                />
-              </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={
+            closestCenter
+          }
+          onDragStart={handleDragStart}
+          onDragCancel={handleDragCancel}
+          onDragEnd={(event) =>
+            handleSortEnd(
+              event,
+              'education'
             )
-          )}
-        </div>
+          }
+        >
+          <SortableContext
+            items={data.education.map(
+              (ed) => ed.id
+            )}
+            strategy={
+              verticalListSortingStrategy
+            }
+          >
+            <div className="space-y-3">
+              {data.education.map(
+                (ed) => (
+                  <SortableItem
+                    key={ed.id}
+                    id={ed.id}
+                  >
+                    {({
+                      setNodeRef,
+                      style,
+                      attributes,
+                      listeners,
+                      isDragging,
+                    }) => (
+                      <div
+                        ref={
+                          setNodeRef
+                        }
+                        style={style}
+                        className={`relative rounded-xl border border-slate-200 p-3 space-y-2 bg-slate-50/60 transition ${
+                          isDragging
+                            ? 'opacity-60 shadow-xl scale-[1.01] z-50'
+                            : 'hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <button
+                            type="button"
+                            {...attributes}
+                            {...listeners}
+                            className="mt-2 cursor-grab active:cursor-grabbing touch-none shrink-0 p-1 -ml-1 rounded hover:bg-slate-200"
+                            title="Déplacer la formation"
+                            aria-label="Déplacer la formation"
+                          >
+                            <GripVertical
+                              className={`w-4 h-4 ${
+                                isDragging
+                                  ? 'text-slate-900'
+                                  : 'text-slate-300 hover:text-slate-600'
+                              }`}
+                            />
+                          </button>
+
+                          <div className="flex-1 grid grid-cols-2 gap-2">
+                            <input
+                              className={
+                                inputCls
+                              }
+                              value={
+                                ed.degree
+                              }
+                              onChange={(
+                                e
+                              ) =>
+                                arrayOps.patch(
+                                  'education',
+                                  ed.id,
+                                  'degree',
+                                  e
+                                    .target
+                                    .value
+                                )
+                              }
+                              placeholder="Diplôme"
+                            />
+
+                            <input
+                              className={
+                                inputCls
+                              }
+                              value={
+                                ed.school
+                              }
+                              onChange={(
+                                e
+                              ) =>
+                                arrayOps.patch(
+                                  'education',
+                                  ed.id,
+                                  'school',
+                                  e
+                                    .target
+                                    .value
+                                )
+                              }
+                              placeholder="Établissement"
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              arrayOps.remove(
+                                'education',
+                                ed.id
+                              )
+                            }
+                            className="mt-2 text-slate-400 hover:text-red-500 transition"
+                            aria-label="Supprimer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        <input
+                          className={
+                            inputCls
+                          }
+                          value={
+                            ed.period
+                          }
+                          onChange={(e) =>
+                            arrayOps.patch(
+                              'education',
+                              ed.id,
+                              'period',
+                              e.target.value
+                            )
+                          }
+                          placeholder="Période"
+                        />
+
+                        <textarea
+                          className={`${inputCls} resize-none`}
+                          rows={2}
+                          value={
+                            ed.description
+                          }
+                          onChange={(e) =>
+                            arrayOps.patch(
+                              'education',
+                              ed.id,
+                              'description',
+                              e.target.value
+                            )
+                          }
+                          placeholder="Description (optionnelle)"
+                        />
+                      </div>
+                    )}
+                  </SortableItem>
+                )
+              )}
+            </div>
+          </SortableContext>
+        </DndContext>
       </section>
 
       {/* =========================
@@ -1802,135 +1817,156 @@ export default function CVForm({ data, onChange }: Props) {
           </button>
         </div>
 
-        <div className="space-y-3">
-          {data.projects.map(
-            (p) => (
-              <div key={p.id}>
-                <DropLine
-                  id={p.id}
-                  position="before"
-                />
-
-                <div
-                  onDragOver={(e) =>
-                    handleDragOver(
-                      e,
-                      p.id,
-                      'projects'
-                    )
-                  }
-                  onDrop={(e) => {
-                    e.preventDefault();
-
-                    handleDrop(
-                      p.id,
-                      'projects'
-                    );
-                  }}
-                  className={`relative rounded-xl border border-slate-200 p-3 space-y-2 bg-slate-50/60 transition ${
-                    draggedId === p.id
-                      ? 'opacity-50 scale-[0.99]'
-                      : 'hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div
-                      draggable
-                      onDragStart={(e) => {
-                        e.stopPropagation();
-
-                        e.dataTransfer.effectAllowed =
-                          'move';
-
-                        startDrag(
-                          p.id,
-                          'projects'
-                        );
-                      }}
-                      onDragEnd={endDrag}
-                      className="mt-2 cursor-grab active:cursor-grabbing touch-none shrink-0"
-                      title="Déplacer le projet"
-                    >
-                      <GripVertical
-                        className={`w-4 h-4 ${
-                          draggedId === p.id
-                            ? 'text-slate-900'
-                            : 'text-slate-300 hover:text-slate-600'
-                        }`}
-                      />
-                    </div>
-
-                    <div className="flex-1 grid grid-cols-2 gap-2">
-                      <input
-                        className={inputCls}
-                        value={p.name}
-                        onChange={(e) =>
-                          arrayOps.patch(
-                            'projects',
-                            p.id,
-                            'name',
-                            e.target.value
-                          )
-                        }
-                        placeholder="Nom du projet"
-                      />
-
-                      <input
-                        className={inputCls}
-                        value={p.url}
-                        onChange={(e) =>
-                          arrayOps.patch(
-                            'projects',
-                            p.id,
-                            'url',
-                            e.target.value
-                          )
-                        }
-                        placeholder="URL"
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        arrayOps.remove(
-                          'projects',
-                          p.id
-                        )
-                      }
-                      className="mt-2 text-slate-400 hover:text-red-500 transition"
-                      aria-label="Supprimer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <textarea
-                    className={`${inputCls} resize-none`}
-                    rows={2}
-                    value={
-                      p.description
-                    }
-                    onChange={(e) =>
-                      arrayOps.patch(
-                        'projects',
-                        p.id,
-                        'description',
-                        e.target.value
-                      )
-                    }
-                    placeholder="Description du projet"
-                  />
-                </div>
-
-                <DropLine
-                  id={p.id}
-                  position="after"
-                />
-              </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={
+            closestCenter
+          }
+          onDragStart={handleDragStart}
+          onDragCancel={handleDragCancel}
+          onDragEnd={(event) =>
+            handleSortEnd(
+              event,
+              'projects'
             )
-          )}
-        </div>
+          }
+        >
+          <SortableContext
+            items={data.projects.map(
+              (p) => p.id
+            )}
+            strategy={
+              verticalListSortingStrategy
+            }
+          >
+            <div className="space-y-3">
+              {data.projects.map(
+                (p) => (
+                  <SortableItem
+                    key={p.id}
+                    id={p.id}
+                  >
+                    {({
+                      setNodeRef,
+                      style,
+                      attributes,
+                      listeners,
+                      isDragging,
+                    }) => (
+                      <div
+                        ref={
+                          setNodeRef
+                        }
+                        style={style}
+                        className={`relative rounded-xl border border-slate-200 p-3 space-y-2 bg-slate-50/60 transition ${
+                          isDragging
+                            ? 'opacity-60 shadow-xl scale-[1.01] z-50'
+                            : 'hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <button
+                            type="button"
+                            {...attributes}
+                            {...listeners}
+                            className="mt-2 cursor-grab active:cursor-grabbing touch-none shrink-0 p-1 -ml-1 rounded hover:bg-slate-200"
+                            title="Déplacer le projet"
+                            aria-label="Déplacer le projet"
+                          >
+                            <GripVertical
+                              className={`w-4 h-4 ${
+                                isDragging
+                                  ? 'text-slate-900'
+                                  : 'text-slate-300 hover:text-slate-600'
+                              }`}
+                            />
+                          </button>
+
+                          <div className="flex-1 grid grid-cols-2 gap-2">
+                            <input
+                              className={
+                                inputCls
+                              }
+                              value={
+                                p.name
+                              }
+                              onChange={(
+                                e
+                              ) =>
+                                arrayOps.patch(
+                                  'projects',
+                                  p.id,
+                                  'name',
+                                  e
+                                    .target
+                                    .value
+                                )
+                              }
+                              placeholder="Nom du projet"
+                            />
+
+                            <input
+                              className={
+                                inputCls
+                              }
+                              value={
+                                p.url
+                              }
+                              onChange={(
+                                e
+                              ) =>
+                                arrayOps.patch(
+                                  'projects',
+                                  p.id,
+                                  'url',
+                                  e
+                                    .target
+                                    .value
+                                )
+                              }
+                              placeholder="URL"
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              arrayOps.remove(
+                                'projects',
+                                p.id
+                              )
+                            }
+                            className="mt-2 text-slate-400 hover:text-red-500 transition"
+                            aria-label="Supprimer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        <textarea
+                          className={`${inputCls} resize-none`}
+                          rows={2}
+                          value={
+                            p.description
+                          }
+                          onChange={(e) =>
+                            arrayOps.patch(
+                              'projects',
+                              p.id,
+                              'description',
+                              e.target.value
+                            )
+                          }
+                          placeholder="Description du projet"
+                        />
+                      </div>
+                    )}
+                  </SortableItem>
+                )
+              )}
+            </div>
+          </SortableContext>
+        </DndContext>
       </section>
 
       {/* =========================

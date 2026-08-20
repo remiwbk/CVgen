@@ -51,7 +51,131 @@ import {
   type SavedCV,
 } from '@/lib/cvStorage';
 
+import LandingPage from '@/components/LandingPage';
+
+import LegalPage from '@/pages/LegalPage';
+
+/**
+ * ---------------------------------------------------------
+ * ROUTING SIMPLE
+ * ---------------------------------------------------------
+ */
+
+type AppRoute =
+  | 'landing'
+  | 'editor'
+  | 'legal'
+  | 'privacy';
+
+function getRoute(): AppRoute {
+  const path = window.location.pathname;
+
+  if (
+    path === '/app' ||
+    window.location.hash === '#app'
+  ) {
+    return 'editor';
+  }
+
+  if (
+    path === '/mentions-legales'
+  ) {
+    return 'legal';
+  }
+
+  if (
+    path === '/politique-confidentialite'
+  ) {
+    return 'privacy';
+  }
+
+  return 'landing';
+}
+
 export default function App() {
+  /**
+   * ---------------------------------------------------------
+   * ROUTING
+   * ---------------------------------------------------------
+   */
+
+  const [route, setRoute] =
+    useState<AppRoute>(getRoute);
+
+  const openEditor = useCallback(() => {
+    window.history.pushState(
+      {},
+      '',
+      '/app'
+    );
+
+    setRoute('editor');
+
+    window.scrollTo(0, 0);
+  }, []);
+
+  const goToLanding = useCallback(() => {
+    window.history.pushState(
+      {},
+      '',
+      '/'
+    );
+
+    setRoute('landing');
+
+    window.scrollTo(0, 0);
+  }, []);
+
+  const goToLegal = useCallback(() => {
+    window.history.pushState(
+      {},
+      '',
+      '/mentions-legales'
+    );
+
+    setRoute('legal');
+
+    window.scrollTo(0, 0);
+  }, []);
+
+  const goToPrivacy = useCallback(() => {
+    window.history.pushState(
+      {},
+      '',
+      '/politique-confidentialite'
+    );
+
+    setRoute('privacy');
+
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setRoute(getRoute());
+
+      window.scrollTo(0, 0);
+    };
+
+    window.addEventListener(
+      'popstate',
+      handlePopState
+    );
+
+    return () => {
+      window.removeEventListener(
+        'popstate',
+        handlePopState
+      );
+    };
+  }, []);
+
+  /**
+   * ---------------------------------------------------------
+   * ÉTAT CV
+   * ---------------------------------------------------------
+   */
+
   const [data, setData] =
     useState<CVData>(emptyCV);
 
@@ -328,7 +452,7 @@ export default function App() {
 
   /**
    * ---------------------------------------------------------
-   * CHANGEMENT DE TEMPLATE
+   * CHANGEMENT TEMPLATE
    * ---------------------------------------------------------
    */
 
@@ -1322,7 +1446,47 @@ export default function App() {
 
   /**
    * ---------------------------------------------------------
-   * RENDER
+   * PAGES PUBLIQUES
+   * ---------------------------------------------------------
+   */
+
+  if (route === 'legal') {
+    return (
+      <LegalPage
+        type="legal"
+        onBack={goToLanding}
+      />
+    );
+  }
+
+  if (route === 'privacy') {
+    return (
+      <LegalPage
+        type="privacy"
+        onBack={goToLanding}
+      />
+    );
+  }
+
+  /**
+   * ---------------------------------------------------------
+   * LANDING PAGE
+   * ---------------------------------------------------------
+   */
+
+  if (route === 'landing') {
+    return (
+      <LandingPage
+        onStart={openEditor}
+        onLegal={goToLegal}
+        onPrivacy={goToPrivacy}
+      />
+    );
+  }
+
+  /**
+   * ---------------------------------------------------------
+   * ÉDITEUR
    * ---------------------------------------------------------
    */
 
@@ -1341,9 +1505,13 @@ export default function App() {
 
           <div className="flex items-center gap-2.5 min-w-0">
 
-            <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0">
+            <button
+              onClick={goToLanding}
+              className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0 hover:bg-slate-700 transition"
+              title="Retour à l'accueil"
+            >
               <FileText className="w-4 h-4" />
-            </div>
+            </button>
 
             <div className="leading-tight min-w-0">
 
@@ -1475,8 +1643,6 @@ export default function App() {
                 </span>
               </button>
 
-              {/* TEMPLATE DROPDOWN */}
-
               {templateOpen && (
                 <>
                   <button
@@ -1502,10 +1668,8 @@ export default function App() {
                     bg-white
                     shadow-2xl
                     overflow-hidden
-
                     right-0
                     sm:right-0
-
                     max-sm:fixed
                     max-sm:left-1/2
                     max-sm:right-auto
@@ -1513,8 +1677,6 @@ export default function App() {
                     max-sm:top-14
                     max-sm:mt-0
                   ">
-
-                    {/* HEADER */}
 
                     <div className="px-5 py-4 border-b border-slate-100">
 
@@ -1554,8 +1716,6 @@ export default function App() {
                       </div>
 
                     </div>
-
-                    {/* TEMPLATES */}
 
                     <div className="p-4 grid grid-cols-2 gap-2">
 
@@ -1612,8 +1772,6 @@ export default function App() {
                               `}
                             >
 
-                              {/* CHECK */}
-
                               {isActive && (
                                 <div className="
                                   absolute
@@ -1631,8 +1789,6 @@ export default function App() {
                                   <Check className="w-3 h-3" />
                                 </div>
                               )}
-
-                              {/* MINI PREVIEW */}
 
                               <div
                                 className={`
@@ -1750,8 +1906,6 @@ export default function App() {
 
                                 </div>
                               </div>
-
-                              {/* NAME */}
 
                               <div className="pr-6">
 

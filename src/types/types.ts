@@ -113,8 +113,8 @@ export const emptyCV: CVData = {
   website: 'alexmartin.design',
   linkedin: 'linkedin.com/in/alexmartin',
   github: 'github.com/alexmartin',
-  photo: '',
-  photoScale: 1,
+  photo: '/images/portrait.jpg',
+  photoScale: 1.5,
   birthDate: '02/15/1990',
   hasDrivingLicense: false,
   summary:
