@@ -1491,7 +1491,6 @@ export default function App() {
 
                   <div className="
                     absolute
-                    right-0
                     top-full
                     mt-2
                     z-50
@@ -1503,6 +1502,16 @@ export default function App() {
                     bg-white
                     shadow-2xl
                     overflow-hidden
+
+                    right-0
+                    sm:right-0
+
+                    max-sm:fixed
+                    max-sm:left-1/2
+                    max-sm:right-auto
+                    max-sm:-translate-x-1/2
+                    max-sm:top-14
+                    max-sm:mt-0
                   ">
 
                     {/* HEADER */}
