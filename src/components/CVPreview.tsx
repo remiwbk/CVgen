@@ -50,6 +50,16 @@ const PAGE_PX_HEIGHT =
 
 const MIN_SCALE = 0.4;
 
+/**
+ * Zoom visuel utilisateur.
+ *
+ * Le zoom ne touche PAS à la vraie page A4.
+ * Il agit uniquement sur l'aperçu.
+ */
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 1.5;
+const ZOOM_STEP = 0.1;
+
 function renderTemplate(
   data: CVData,
   template: TemplateId,
@@ -61,7 +71,6 @@ function renderTemplate(
   fontScale: number
 ) {
   switch (template) {
-
     case 'modern':
       return (
         <ModernTemplate
@@ -172,6 +181,14 @@ const CVPreview = forwardRef<
       useState(1);
 
     /**
+     * Zoom uniquement visuel.
+     *
+     * 1 = 100 %
+     */
+    const [zoomScale, setZoomScale] =
+      useState(1);
+
+    /**
      * Rend la page A4 accessible à App.tsx.
      */
     useImperativeHandle(
@@ -258,8 +275,12 @@ const CVPreview = forwardRef<
      * =========================================================
      * FIT PREVIEW
      * =========================================================
+     *
+     * Calcule la taille permettant d'afficher la page
+     * dans la largeur disponible.
+     *
+     * Ce scale est indépendant du zoom utilisateur.
      */
-
     useLayoutEffect(() => {
       if (captureMode) {
         setFitScale(1);
@@ -270,7 +291,9 @@ const CVPreview = forwardRef<
         const pane =
           paneRef.current;
 
-        if (!pane) return;
+        if (!pane) {
+          return;
+        }
 
         const available =
           pane.clientWidth - 48;
@@ -307,20 +330,27 @@ const CVPreview = forwardRef<
      * AUTO-SCALE DU CONTENU
      * =========================================================
      *
-     * On conserve ton comportement :
-     * le contenu est réduit si nécessaire pour tenir dans A4.
+     * Le contenu est réduit si nécessaire pour tenir
+     * dans la page A4.
+     *
+     * Le zoom utilisateur n'intervient volontairement
+     * PAS ici.
      */
     useLayoutEffect(() => {
       const compute = () => {
         const content =
           contentRef.current;
 
-        if (!content) return;
+        if (!content) {
+          return;
+        }
 
         const natural =
           content.scrollHeight;
 
-        if (natural <= 0) return;
+        if (natural <= 0) {
+          return;
+        }
 
         const scale =
           Math.max(
@@ -360,15 +390,59 @@ const CVPreview = forwardRef<
 
     /**
      * =========================================================
+     * ZOOM
+     * =========================================================
+     */
+
+    const decreaseZoom = () => {
+      setZoomScale(
+        (current) =>
+          Math.max(
+            MIN_ZOOM,
+            Number(
+              (
+                current -
+                ZOOM_STEP
+              ).toFixed(2)
+            )
+          )
+      );
+    };
+
+    const increaseZoom = () => {
+      setZoomScale(
+        (current) =>
+          Math.min(
+            MAX_ZOOM,
+            Number(
+              (
+                current +
+                ZOOM_STEP
+              ).toFixed(2)
+            )
+          )
+      );
+    };
+
+    const resetZoom = () => {
+      setZoomScale(1);
+    };
+
+    /**
+     * =========================================================
      * RENDER
      * =========================================================
      */
+
+    const previewScale =
+      fitScale * zoomScale;
 
     return (
       <div
         ref={paneRef}
         className="
           preview-scroll
+          relative
           w-full
           h-full
           overflow-auto
@@ -376,9 +450,137 @@ const CVPreview = forwardRef<
           items-start
           justify-center
           p-6
+          pt-20
+          sm:pt-20
           bg-slate-200
         "
       >
+        {/* ===================================================
+            CONTRÔLES DE ZOOM
+        ==================================================== */}
+
+        {!captureMode && (
+          <div
+            className="
+              absolute
+              z-20
+              top-3
+              right-3
+              sm:top-4
+              sm:right-4
+              flex
+              items-center
+              gap-1
+              rounded-xl
+              border
+              border-slate-200
+              bg-white
+              shadow-lg
+              p-1
+            "
+          >
+            {/* DÉZOOM */}
+
+            <button
+              type="button"
+              onClick={
+                decreaseZoom
+              }
+              disabled={
+                zoomScale <=
+                MIN_ZOOM
+              }
+              className="
+                w-8
+                h-8
+                sm:w-9
+                sm:h-9
+                rounded-lg
+                flex
+                items-center
+                justify-center
+                text-slate-700
+                text-lg
+                font-medium
+                hover:bg-slate-100
+                active:bg-slate-200
+                disabled:opacity-30
+                disabled:cursor-not-allowed
+                transition
+              "
+              title="Dézoomer"
+              aria-label="Dézoomer"
+            >
+              −
+            </button>
+
+            {/* POURCENTAGE */}
+
+            <button
+              type="button"
+              onClick={
+                resetZoom
+              }
+              className="
+                min-w-[54px]
+                sm:min-w-[62px]
+                h-8
+                sm:h-9
+                px-2
+                rounded-lg
+                text-[11px]
+                sm:text-xs
+                font-semibold
+                text-slate-600
+                hover:bg-slate-100
+                transition
+              "
+              title="Réinitialiser le zoom"
+              aria-label="Réinitialiser le zoom"
+            >
+              {Math.round(
+                zoomScale * 100
+              )}
+              %
+            </button>
+
+            {/* ZOOM */}
+
+            <button
+              type="button"
+              onClick={
+                increaseZoom
+              }
+              disabled={
+                zoomScale >=
+                MAX_ZOOM
+              }
+              className="
+                w-8
+                h-8
+                sm:w-9
+                sm:h-9
+                rounded-lg
+                flex
+                items-center
+                justify-center
+                text-slate-700
+                text-lg
+                font-medium
+                hover:bg-slate-100
+                active:bg-slate-200
+                disabled:opacity-30
+                disabled:cursor-not-allowed
+                transition
+              "
+              title="Zoomer"
+              aria-label="Zoomer"
+            >
+              +
+            </button>
+          </div>
+        )}
+
         {/* ===================================================
             WRAPPER DE MISE À L'ÉCHELLE
         ==================================================== */}
@@ -387,13 +589,14 @@ const CVPreview = forwardRef<
           style={{
             width:
               PAGE_PX_WIDTH *
-              fitScale,
+              previewScale,
 
             height:
               captureMode
                 ? PAGE_PX_HEIGHT *
-                  fitScale
-                : 'auto',
+                  previewScale
+                : PAGE_PX_HEIGHT *
+                  previewScale,
           }}
           className="
             relative
@@ -407,7 +610,7 @@ const CVPreview = forwardRef<
           <div
             style={{
               transform:
-                `scale(${fitScale})`,
+                `scale(${previewScale})`,
 
               transformOrigin:
                 'top left',
