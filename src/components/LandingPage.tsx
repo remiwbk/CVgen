@@ -906,7 +906,7 @@ export default function LandingPage({
                   <Sparkles className="h-3.5 w-3.5 shrink-0 text-slate-900" />
 
                   <span className="min-w-0">
-                    Crée ton CV gratuitement
+                    Un CV qui te ressemble, en quelques minutes
                   </span>
                 </div>
 
@@ -924,10 +924,10 @@ export default function LandingPage({
                     lg:text-7xl
                   "
                 >
-                  Un CV
+                  Crée ton CV professionnel
                   <br />
                   <span className="text-slate-400">
-                    te ressemble.
+                    gratuitement.
                   </span>
                 </h1>
 
