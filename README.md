@@ -2,14 +2,14 @@
 
 **[🌐 Voir la démo en ligne](https://cv-generator.remidupire.com/)**
 
-> **Générateur de CV personnalisé en ligne** – Crée, personnalise et exporte ton CV au format PNG/JPEG/PDF.
+> **Générateur de CV personnalisé en ligne** – Crée, personnalise et exporte ton CV au format PNG/PDF.
 
 ---
 
 ## ✨ Fonctionnalités
 
 - **Édition en temps réel** : Modifie ton CV directement dans l'interface.
-- **Export multi-format** : Télécharge ton CV en **PNG**, **JPEG** ou **PDF**.
+- **Export multi-format** : Télécharge ton CV en **PNG** ou **PDF**.
 - **Design responsive** : Adapté aux mobiles et ordinateurs.
 - **Personnalisation avancée** : Couleurs, polices, mises en page, etc.
 
@@ -58,7 +58,6 @@
 
 - Clique sur **"Exporter"** et choisis le format :
   - **PNG** : Pour une image haute qualité.
-  - **JPEG** : Pour un fichier léger.
   - **PDF** : Pour un document imprimable.
 
 
@@ -67,7 +66,6 @@
 ## 🛠️ Technologies utilisées
 
 - **Frontend** : React, Tailwind CSS
-- **Export** : `html2canvas` ou `dom-to-image`
 - **Icônes** : [Font Awesome](https://fontawesome.com/) ou [React Icons](https://react-icons.github.io/react-icons/)
 
 ---
