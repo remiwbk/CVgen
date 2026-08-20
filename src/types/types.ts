@@ -67,6 +67,7 @@ export interface CVData {
   projects: Project[];
   interests: string[];
   style: CVStyle;
+  photoScale?: number;
 }
 
 export interface ThemeColors {
@@ -110,6 +111,7 @@ export const emptyCV: CVData = {
   linkedin: 'linkedin.com/in/alexmartin',
   github: 'github.com/alexmartin',
   photo: '',
+  photoScale: 1,
   summary:
     "Product designer with 8+ years crafting digital experiences for startups and enterprises. I blend user research, interaction design, and systems thinking to ship products people love.",
   skills: [

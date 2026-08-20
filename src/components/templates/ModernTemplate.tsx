@@ -46,7 +46,11 @@ export default function ModernTemplate({
             src={data.photo}
             alt={data.name}
             crossOrigin="anonymous"
-            className="w-24 h-24 rounded-full object-cover border-4 border-white/30 shadow-lg shrink-0"
+            className="rounded-full object-cover border-4 border-white/30 shadow-lg shrink-0"
+            style={{
+              width: `${96 * (data.photoScale ?? 1)}px`,
+              height: `${96 * (data.photoScale ?? 1)}px`,
+            }}
           />
         )}
 
@@ -74,45 +78,83 @@ export default function ModernTemplate({
           className="space-y-1.5 opacity-95 shrink-0"
         >
           {data.email && (
-            <div className="flex items-center gap-2 justify-end">
+            <a
+              href={`mailto:${data.email}`}
+              style={{ color: 'inherit', textDecoration: 'none' }}
+              className="flex items-center gap-2 justify-end"
+            >
               <Mail className="w-4 h-4" />
               <span>{data.email}</span>
-            </div>
+            </a>
           )}
 
           {data.phone && (
-            <div className="flex items-center gap-2 justify-end">
+            <a
+              href={`tel:${data.phone.replace(/\s/g, '')}`}
+              style={{ color: 'inherit', textDecoration: 'none' }}
+              className="flex items-center gap-2 justify-end"
+            >
               <Phone className="w-4 h-4" />
               <span>{data.phone}</span>
-            </div>
+            </a>
           )}
 
           {data.location && (
-            <div className="flex items-center gap-2 justify-end">
+            <span className="flex items-center gap-2 justify-end">
               <MapPin className="w-4 h-4" />
               <span>{data.location}</span>
-            </div>
+            </span>
           )}
 
           {data.website && (
-            <div className="flex items-center gap-2 justify-end">
+            <a
+              href={
+                data.website.startsWith('http')
+                  ? data.website
+                  : `https://${data.website}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'inherit', textDecoration: 'none' }}
+              className="flex items-center gap-2 justify-end"
+            >
               <Globe className="w-4 h-4" />
               <span>{data.website}</span>
-            </div>
+            </a>
           )}
 
           {data.linkedin && (
-            <div className="flex items-center gap-2 justify-end">
+            <a
+              href={
+                data.linkedin.startsWith('http')
+                  ? data.linkedin
+                  : `https://${data.linkedin}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'inherit', textDecoration: 'none' }}
+              className="flex items-center gap-2 justify-end"
+            >
               <Linkedin className="w-4 h-4" />
               <span>{data.linkedin}</span>
-            </div>
+            </a>
           )}
 
           {data.github && (
-            <div className="flex items-center gap-2 justify-end">
+            <a
+              href={
+                data.github.startsWith('http')
+                  ? data.github
+                  : `https://${data.github}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'inherit', textDecoration: 'none' }}
+              className="flex items-center gap-2 justify-end"
+            >
               <Github className="w-4 h-4" />
               <span>{data.github}</span>
-            </div>
+            </a>
           )}
         </div>
       </header>
@@ -254,14 +296,23 @@ export default function ModernTemplate({
                     </h3>
 
                     {p.url && (
-                      <p
+                      <a
+                        href={
+                          p.url.startsWith('http')
+                            ? p.url
+                            : `https://${p.url}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
                         style={{
                           fontSize: fs(11),
                           color: colors.accent,
+                          textDecoration: 'underline',
                         }}
+                        className="inline-block"
                       >
                         {p.url}
-                      </p>
+                      </a>
                     )}
 
                     {p.description && (

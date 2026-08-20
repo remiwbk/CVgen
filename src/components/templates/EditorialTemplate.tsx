@@ -26,12 +26,47 @@ export default function EditorialTemplate({
   const hasSkills = data.skills.some((c) => c.items.length > 0);
 
   const contactItems = [
-    { value: data.email, icon: Mail },
-    { value: data.phone, icon: Phone },
-    { value: data.location, icon: MapPin },
-    { value: data.website, icon: Globe },
-    { value: data.linkedin, icon: Linkedin },
-    { value: data.github, icon: Github },
+    {
+      value: data.email,
+      icon: Mail,
+      href: data.email ? `mailto:${data.email}` : undefined,
+    },
+    {
+      value: data.phone,
+      icon: Phone,
+      href: data.phone ? `tel:${data.phone}` : undefined,
+    },
+    {
+      value: data.location,
+      icon: MapPin,
+    },
+    {
+      value: data.website,
+      icon: Globe,
+      href: data.website
+        ? data.website.startsWith('http')
+          ? data.website
+          : `https://${data.website}`
+        : undefined,
+    },
+    {
+      value: data.linkedin,
+      icon: Linkedin,
+      href: data.linkedin
+        ? data.linkedin.startsWith('http')
+          ? data.linkedin
+          : `https://${data.linkedin}`
+        : undefined,
+    },
+    {
+      value: data.github,
+      icon: Github,
+      href: data.github
+        ? data.github.startsWith('http')
+          ? data.github
+          : `https://${data.github}`
+        : undefined,
+    },
   ];
 
   return (
@@ -90,14 +125,37 @@ export default function EditorialTemplate({
             }}
             className="flex flex-wrap gap-x-4 gap-y-1.5 mt-5"
           >
-            {contactItems.map(({ value, icon: Icon }, index) =>
+            {contactItems.map(({ value, icon: Icon, href }, index) =>
               value ? (
                 <span
                   key={index}
                   className="flex items-center gap-1.5"
                 >
                   <Icon className="w-3 h-3" />
-                  {value}
+
+                  {href ? (
+                    <a
+                      href={href}
+                      target={
+                        href.startsWith('http')
+                          ? '_blank'
+                          : undefined
+                      }
+                      rel={
+                        href.startsWith('http')
+                          ? 'noopener noreferrer'
+                          : undefined
+                      }
+                      style={{
+                        color: 'inherit',
+                        textDecoration: 'underline',
+                      }}
+                    >
+                      {value}
+                    </a>
+                  ) : (
+                    value
+                  )}
                 </span>
               ) : null
             )}
@@ -109,8 +167,10 @@ export default function EditorialTemplate({
             src={data.photo}
             alt={data.name}
             crossOrigin="anonymous"
-            className="w-28 h-28 object-cover rounded-xl"
+            className="object-cover rounded-xl shrink-0"
             style={{
+              width: `${112 * (data.photoScale ?? 1)}px`,
+              height: `${112 * (data.photoScale ?? 1)}px`,
               border: `3px solid ${colors.primary}`,
             }}
           />
@@ -395,15 +455,23 @@ export default function EditorialTemplate({
                     </h3>
 
                     {project.url && (
-                      <p
+                      <a
+                        href={
+                          project.url.startsWith('http')
+                            ? project.url
+                            : `https://${project.url}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
                         style={{
                           color: colors.accent,
                           fontSize: fs(9.5),
+                          textDecoration: 'underline',
                         }}
-                        className="mt-0.5"
+                        className="inline-block mt-0.5"
                       >
                         {project.url}
-                      </p>
+                      </a>
                     )}
 
                     {project.description && (

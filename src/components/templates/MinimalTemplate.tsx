@@ -74,37 +74,106 @@ export default function MinimalTemplate({
           >
             {data.email && (
               <span className="flex items-center gap-1.5">
-                <Mail className="w-3 h-3" /> {data.email}
+                <Mail className="w-3 h-3" />
+
+                <a
+                  href={`mailto:${data.email}`}
+                  style={{
+                    color: 'inherit',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  {data.email}
+                </a>
               </span>
             )}
 
             {data.phone && (
               <span className="flex items-center gap-1.5">
-                <Phone className="w-3 h-3" /> {data.phone}
+                <Phone className="w-3 h-3" />
+
+                <a
+                  href={`tel:${data.phone}`}
+                  style={{
+                    color: 'inherit',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  {data.phone}
+                </a>
               </span>
             )}
 
             {data.location && (
               <span className="flex items-center gap-1.5">
-                <MapPin className="w-3 h-3" /> {data.location}
+                <MapPin className="w-3 h-3" />
+                {data.location}
               </span>
             )}
 
             {data.website && (
               <span className="flex items-center gap-1.5">
-                <Globe className="w-3 h-3" /> {data.website}
+                <Globe className="w-3 h-3" />
+
+                <a
+                  href={
+                    data.website.startsWith('http')
+                      ? data.website
+                      : `https://${data.website}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: 'inherit',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  {data.website}
+                </a>
               </span>
             )}
 
             {data.linkedin && (
               <span className="flex items-center gap-1.5">
-                <Linkedin className="w-3 h-3" /> {data.linkedin}
+                <Linkedin className="w-3 h-3" />
+
+                <a
+                  href={
+                    data.linkedin.startsWith('http')
+                      ? data.linkedin
+                      : `https://${data.linkedin}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: 'inherit',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  {data.linkedin}
+                </a>
               </span>
             )}
 
             {data.github && (
               <span className="flex items-center gap-1.5">
-                <Github className="w-3 h-3" /> {data.github}
+                <Github className="w-3 h-3" />
+
+                <a
+                  href={
+                    data.github.startsWith('http')
+                      ? data.github
+                      : `https://${data.github}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: 'inherit',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  {data.github}
+                </a>
               </span>
             )}
           </div>
@@ -115,7 +184,11 @@ export default function MinimalTemplate({
             src={data.photo}
             alt={data.name}
             crossOrigin="anonymous"
-            className="w-24 h-24 rounded-full object-cover shrink-0"
+            className="rounded-full object-cover shrink-0"
+            style={{
+              width: `${96 * (data.photoScale ?? 1)}px`,
+              height: `${96 * (data.photoScale ?? 1)}px`,
+            }}
           />
         )}
       </header>
@@ -313,7 +386,23 @@ export default function MinimalTemplate({
                     }}
                     className="col-span-1 pt-0.5"
                   >
-                    {p.url}
+                    {p.url && (
+                      <a
+                        href={
+                          p.url.startsWith('http')
+                            ? p.url
+                            : `https://${p.url}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: colors.accent,
+                          textDecoration: 'underline',
+                        }}
+                      >
+                        {p.url}
+                      </a>
+                    )}
                   </div>
 
                   <div className="col-span-3">

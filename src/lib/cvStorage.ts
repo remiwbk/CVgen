@@ -407,6 +407,12 @@ function normalizeCVData(
         value.photo
       ),
 
+    photoScale:
+      typeof value.photoScale === 'number' &&
+      Number.isFinite(value.photoScale)
+        ? value.photoScale
+        : 1,
+
     summary:
       stringValue(
         value.summary

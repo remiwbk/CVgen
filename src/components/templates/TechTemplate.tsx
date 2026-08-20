@@ -75,7 +75,11 @@ export default function TechTemplate({
             src={data.photo}
             alt={data.name}
             crossOrigin="anonymous"
-            className="w-24 h-24 rounded-xl object-cover"
+            className="rounded-xl object-cover shrink-0"
+            style={{
+              width: `${96 * (data.photoScale ?? 1)}px`,
+              height: `${96 * (data.photoScale ?? 1)}px`,
+            }}
           />
         )}
       </header>
@@ -90,45 +94,85 @@ export default function TechTemplate({
         }}
       >
         {data.email && (
-          <span className="flex gap-1.5 items-center">
+          <a
+            href={`mailto:${data.email}`}
+            className="flex gap-1.5 items-center hover:underline"
+          >
             <Mail className="w-3 h-3" />
             {data.email}
-          </span>
+          </a>
         )}
 
         {data.phone && (
-          <span className="flex gap-1.5 items-center">
+          <a
+            href={`tel:${data.phone}`}
+            className="flex gap-1.5 items-center hover:underline"
+          >
             <Phone className="w-3 h-3" />
             {data.phone}
-          </span>
+          </a>
         )}
 
         {data.location && (
-          <span className="flex gap-1.5 items-center">
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+              data.location
+            )}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex gap-1.5 items-center hover:underline"
+          >
             <MapPin className="w-3 h-3" />
             {data.location}
-          </span>
+          </a>
         )}
 
         {data.website && (
-          <span className="flex gap-1.5 items-center">
+          <a
+            href={
+              data.website.startsWith('http')
+                ? data.website
+                : `https://${data.website}`
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex gap-1.5 items-center hover:underline"
+          >
             <Globe className="w-3 h-3" />
             {data.website}
-          </span>
+          </a>
         )}
 
         {data.linkedin && (
-          <span className="flex gap-1.5 items-center">
+          <a
+            href={
+              data.linkedin.startsWith('http')
+                ? data.linkedin
+                : `https://${data.linkedin}`
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex gap-1.5 items-center hover:underline"
+          >
             <Linkedin className="w-3 h-3" />
             {data.linkedin}
-          </span>
+          </a>
         )}
 
         {data.github && (
-          <span className="flex gap-1.5 items-center">
+          <a
+            href={
+              data.github.startsWith('http')
+                ? data.github
+                : `https://${data.github}`
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex gap-1.5 items-center hover:underline"
+          >
             <Github className="w-3 h-3" />
             {data.github}
-          </span>
+          </a>
         )}
       </div>
 
@@ -389,14 +433,22 @@ export default function TechTemplate({
                     </h3>
 
                     {project.url && (
-                      <p
+                      <a
+                        href={
+                          project.url.startsWith('http')
+                            ? project.url
+                            : `https://${project.url}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
                         style={{
                           color: colors.accent,
-                          fontSize: fs(8.5),
+                          fontSize: fs(9),
+                          textDecoration: 'underline',
                         }}
                       >
                         {project.url}
-                      </p>
+                      </a>
                     )}
 
                     {project.description && (

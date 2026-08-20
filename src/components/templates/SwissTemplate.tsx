@@ -40,7 +40,11 @@ export default function SwissTemplate({
             src={data.photo}
             alt={data.name}
             crossOrigin="anonymous"
-            className="w-24 h-24 rounded-full object-cover"
+            className="rounded-full object-cover shrink-0"
+            style={{
+              width: `${96 * (data.photoScale ?? 1)}px`,
+              height: `${96 * (data.photoScale ?? 1)}px`,
+            }}
           />
         ) : (
           <div
@@ -80,45 +84,98 @@ export default function SwissTemplate({
           className="space-y-1.5 text-right"
         >
           {data.email && (
-            <div className="flex items-center gap-1.5 justify-end">
+            <a
+              href={`mailto:${data.email}`}
+              style={{
+                color: 'inherit',
+                textDecoration: 'none',
+              }}
+              className="flex items-center gap-1.5 justify-end"
+            >
               <Mail className="w-3 h-3" />
               {data.email}
-            </div>
+            </a>
           )}
 
           {data.phone && (
-            <div className="flex items-center gap-1.5 justify-end">
+            <a
+              href={`tel:${data.phone.replace(/\s/g, '')}`}
+              style={{
+                color: 'inherit',
+                textDecoration: 'none',
+              }}
+              className="flex items-center gap-1.5 justify-end"
+            >
               <Phone className="w-3 h-3" />
               {data.phone}
-            </div>
+            </a>
           )}
 
           {data.location && (
-            <div className="flex items-center gap-1.5 justify-end">
+            <span className="flex items-center gap-1.5 justify-end">
               <MapPin className="w-3 h-3" />
               {data.location}
-            </div>
+            </span>
           )}
 
           {data.website && (
-            <div className="flex items-center gap-1.5 justify-end">
+            <a
+              href={
+                data.website.startsWith('http')
+                  ? data.website
+                  : `https://${data.website}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: 'inherit',
+                textDecoration: 'none',
+              }}
+              className="flex items-center gap-1.5 justify-end"
+            >
               <Globe className="w-3 h-3" />
               {data.website}
-            </div>
+            </a>
           )}
 
           {data.linkedin && (
-            <div className="flex items-center gap-1.5 justify-end">
+            <a
+              href={
+                data.linkedin.startsWith('http')
+                  ? data.linkedin
+                  : `https://${data.linkedin}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: 'inherit',
+                textDecoration: 'none',
+              }}
+              className="flex items-center gap-1.5 justify-end"
+            >
               <Linkedin className="w-3 h-3" />
               {data.linkedin}
-            </div>
+            </a>
           )}
 
           {data.github && (
-            <div className="flex items-center gap-1.5 justify-end">
+            <a
+              href={
+                data.github.startsWith('http')
+                  ? data.github
+                  : `https://${data.github}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: 'inherit',
+                textDecoration: 'none',
+              }}
+              className="flex items-center gap-1.5 justify-end"
+            >
               <Github className="w-3 h-3" />
               {data.github}
-            </div>
+            </a>
           )}
         </div>
       </header>
@@ -385,14 +442,23 @@ export default function SwissTemplate({
                     </h3>
 
                     {project.url && (
-                      <span
+                      <a
+                        href={
+                          project.url.startsWith('http')
+                            ? project.url
+                            : `https://${project.url}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
                         style={{
                           color: colors.accent,
                           fontSize: fs(9),
+                          textDecoration: 'underline',
                         }}
+                        className="inline-block"
                       >
                         {project.url}
-                      </span>
+                      </a>
                     )}
 
                     {project.description && (

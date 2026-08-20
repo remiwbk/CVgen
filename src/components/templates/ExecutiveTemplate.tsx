@@ -77,13 +77,19 @@ export default function ExecutiveTemplate({
             src={data.photo}
             alt={data.name}
             crossOrigin="anonymous"
-            className="w-28 h-28 object-cover rounded-full"
+            className="object-cover rounded-full shrink-0"
             style={{
+              width: `${112 * (data.photoScale ?? 1)}px`,
+              height: `${112 * (data.photoScale ?? 1)}px`,
               border: `4px solid ${colors.surface}`,
             }}
           />
         )}
       </header>
+
+      {/* =====================================================
+          CONTACT
+      ====================================================== */}
 
       {/* =====================================================
           CONTACT
@@ -100,14 +106,30 @@ export default function ExecutiveTemplate({
         {data.email && (
           <span className="flex gap-1.5 items-center">
             <Mail className="w-3 h-3" />
-            {data.email}
+            <a
+              href={`mailto:${data.email}`}
+              style={{
+                color: 'inherit',
+                textDecoration: 'underline',
+              }}
+            >
+              {data.email}
+            </a>
           </span>
         )}
 
         {data.phone && (
           <span className="flex gap-1.5 items-center">
             <Phone className="w-3 h-3" />
-            {data.phone}
+            <a
+              href={`tel:${data.phone}`}
+              style={{
+                color: 'inherit',
+                textDecoration: 'underline',
+              }}
+            >
+              {data.phone}
+            </a>
           </span>
         )}
 
@@ -121,21 +143,63 @@ export default function ExecutiveTemplate({
         {data.website && (
           <span className="flex gap-1.5 items-center">
             <Globe className="w-3 h-3" />
-            {data.website}
+            <a
+              href={
+                data.website.startsWith('http')
+                  ? data.website
+                  : `https://${data.website}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: 'inherit',
+                textDecoration: 'underline',
+              }}
+            >
+              {data.website}
+            </a>
           </span>
         )}
 
         {data.linkedin && (
           <span className="flex gap-1.5 items-center">
             <Linkedin className="w-3 h-3" />
-            {data.linkedin}
+            <a
+              href={
+                data.linkedin.startsWith('http')
+                  ? data.linkedin
+                  : `https://${data.linkedin}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: 'inherit',
+                textDecoration: 'underline',
+              }}
+            >
+              {data.linkedin}
+            </a>
           </span>
         )}
 
         {data.github && (
           <span className="flex gap-1.5 items-center">
             <Github className="w-3 h-3" />
-            {data.github}
+            <a
+              href={
+                data.github.startsWith('http')
+                  ? data.github
+                  : `https://${data.github}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: 'inherit',
+                textDecoration: 'underline',
+              }}
+            >
+              {data.github}
+            </a>
           </span>
         )}
       </div>
@@ -419,14 +483,23 @@ export default function ExecutiveTemplate({
                       </h3>
 
                       {project.url && (
-                        <span
+                        <a
+                          href={
+                            project.url.startsWith('http')
+                              ? project.url
+                              : `https://${project.url}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
                           style={{
                             color: colors.accent,
                             fontSize: fs(9),
+                            textDecoration: 'underline',
                           }}
+                          className="inline-block"
                         >
                           {project.url}
-                        </span>
+                        </a>
                       )}
                     </div>
 

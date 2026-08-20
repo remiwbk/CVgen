@@ -49,7 +49,12 @@ export default function CorporateTemplate({
               src={data.photo}
               alt={data.name}
               crossOrigin="anonymous"
-              className="w-24 h-24 rounded-lg object-cover shrink-0"
+              className="object-cover rounded-xl shrink-0"
+              style={{
+                width: `${112 * (data.photoScale ?? 1)}px`,
+                height: `${112 * (data.photoScale ?? 1)}px`,
+                border: `3px solid ${colors.primary}`,
+              }}
             />
           )}
 
@@ -76,17 +81,25 @@ export default function CorporateTemplate({
               className="flex flex-wrap gap-x-4 gap-y-1.5 mt-4 opacity-85"
             >
               {data.email && (
-                <span className="flex items-center gap-1">
+                <a
+                  href={`mailto:${data.email}`}
+                  className="flex items-center gap-1"
+                  style={{ color: 'inherit' }}
+                >
                   <Mail className="w-3 h-3" />
                   {data.email}
-                </span>
+                </a>
               )}
 
               {data.phone && (
-                <span className="flex items-center gap-1">
+                <a
+                  href={`tel:${data.phone}`}
+                  className="flex items-center gap-1"
+                  style={{ color: 'inherit' }}
+                >
                   <Phone className="w-3 h-3" />
                   {data.phone}
-                </span>
+                </a>
               )}
 
               {data.location && (
@@ -97,24 +110,54 @@ export default function CorporateTemplate({
               )}
 
               {data.website && (
-                <span className="flex items-center gap-1">
+                <a
+                  href={
+                    data.website.startsWith('http')
+                      ? data.website
+                      : `https://${data.website}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1"
+                  style={{ color: 'inherit' }}
+                >
                   <Globe className="w-3 h-3" />
                   {data.website}
-                </span>
+                </a>
               )}
 
               {data.linkedin && (
-                <span className="flex items-center gap-1">
+                <a
+                  href={
+                    data.linkedin.startsWith('http')
+                      ? data.linkedin
+                      : `https://${data.linkedin}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1"
+                  style={{ color: 'inherit' }}
+                >
                   <Linkedin className="w-3 h-3" />
                   {data.linkedin}
-                </span>
+                </a>
               )}
 
               {data.github && (
-                <span className="flex items-center gap-1">
+                <a
+                  href={
+                    data.github.startsWith('http')
+                      ? data.github
+                      : `https://${data.github}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1"
+                  style={{ color: 'inherit' }}
+                >
                   <Github className="w-3 h-3" />
                   {data.github}
-                </span>
+                </a>
               )}
             </div>
           </div>
@@ -400,14 +443,24 @@ export default function CorporateTemplate({
                     </h3>
 
                     {project.url && (
-                      <p
+                      <a
+                        href={
+                          project.url.startsWith('http://') ||
+                          project.url.startsWith('https://')
+                            ? project.url
+                            : `https://${project.url}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
                         style={{
                           color: colors.accent,
                           fontSize: fs(9),
+                          textDecoration: 'underline',
+                          cursor: 'pointer',
                         }}
                       >
                         {project.url}
-                      </p>
+                      </a>
                     )}
 
                     {project.description && (
