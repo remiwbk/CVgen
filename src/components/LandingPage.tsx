@@ -14,7 +14,6 @@ import {
 
 import {
   useEffect,
-  useRef,
   useState,
 } from 'react';
 
@@ -313,9 +312,6 @@ export default function LandingPage({
    * ============================================================
    */
 
-  const scrollSectionRef =
-    useRef<HTMLDivElement | null>(null);
-
   useEffect(() => {
     const elements =
       document.querySelectorAll(
@@ -367,9 +363,9 @@ export default function LandingPage({
           });
         },
         {
-          threshold: 0.12,
+          threshold: 0,
           rootMargin:
-            '0px 0px -50px 0px',
+            '0px 0px -20px 0px',
         }
       );
 
@@ -418,10 +414,10 @@ export default function LandingPage({
 
           [data-scroll-reveal] {
             opacity: 0;
-            transform: translateY(28px);
+            transform: translateY(16px);
             transition:
-              opacity 700ms ease-out,
-              transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+              opacity 500ms ease-out,
+              transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
           }
 
           [data-scroll-reveal].scroll-reveal-visible {
@@ -530,8 +526,6 @@ export default function LandingPage({
             lg:px-10
           "
         >
-          {/* LOGO */}
-
           <button
             type="button"
             onClick={() =>
@@ -576,8 +570,6 @@ export default function LandingPage({
             </div>
           </button>
 
-          {/* DESKTOP NAV */}
-
           <nav className="hidden shrink-0 items-center gap-7 md:flex">
             <button
               type="button"
@@ -609,8 +601,6 @@ export default function LandingPage({
               FAQ
             </button>
           </nav>
-
-          {/* RIGHT */}
 
           <div className="flex shrink-0 items-center gap-2">
             <button
@@ -670,8 +660,6 @@ export default function LandingPage({
             </button>
           </div>
         </div>
-
-        {/* MOBILE MENU */}
 
         {mobileMenuOpen && (
           <div
@@ -781,8 +769,6 @@ export default function LandingPage({
             lg:pb-28
           "
         >
-          {/* BACKGROUND */}
-
           <div
             className="
               pointer-events-none
@@ -864,9 +850,6 @@ export default function LandingPage({
                 lg:gap-16
               "
             >
-
-              {/* HERO TEXT */}
-
               <div
                 className={`
                   mx-auto
@@ -948,8 +931,6 @@ export default function LandingPage({
                   tes expériences et exporte directement
                   ton CV au format A4.
                 </p>
-
-                {/* BUTTONS */}
 
                 <div
                   className="
@@ -1045,8 +1026,6 @@ export default function LandingPage({
                   </button>
                 </div>
 
-                {/* BENEFITS */}
-
                 <div
                   className="
                     mt-7
@@ -1078,8 +1057,6 @@ export default function LandingPage({
                   </span>
                 </div>
               </div>
-
-              {/* HERO CV */}
 
               <div
                 className={`
@@ -1154,8 +1131,6 @@ export default function LandingPage({
                     </div>
                   </div>
 
-                  {/* TEMPLATE SELECTOR */}
-
                   <div
                     className="
                       absolute
@@ -1214,8 +1189,6 @@ export default function LandingPage({
                   </div>
                 </div>
 
-                {/* ACTIVE TEMPLATE LABEL */}
-
                 <div
                   className="
                     absolute
@@ -1250,12 +1223,9 @@ export default function LandingPage({
           </div>
         </section>
 
-        {/* =====================================================
-            SOCIAL PROOF
-        ====================================================== */}
+        {/* SOCIAL PROOF */}
 
         <section
-          data-scroll-reveal
           className="border-y border-slate-100 bg-slate-50/70"
         >
           <div
@@ -1292,13 +1262,10 @@ export default function LandingPage({
           </div>
         </section>
 
-        {/* =====================================================
-            FEATURES
-        ====================================================== */}
+        {/* FEATURES */}
 
         <section
           id="features"
-          data-scroll-reveal
           className="
             scroll-mt-20
             py-20
@@ -1317,6 +1284,7 @@ export default function LandingPage({
             "
           >
             <div
+              data-scroll-reveal
               className="
                 grid
                 min-w-0
@@ -1439,13 +1407,10 @@ export default function LandingPage({
           </div>
         </section>
 
-        {/* =====================================================
-            TEMPLATES
-        ====================================================== */}
+        {/* TEMPLATES */}
 
         <section
           id="templates"
-          data-scroll-reveal
           className="
             scroll-mt-20
             border-y
@@ -1466,7 +1431,10 @@ export default function LandingPage({
               lg:px-10
             "
           >
-            <div className="mx-auto w-full max-w-2xl text-center">
+            <div
+              data-scroll-reveal
+              className="mx-auto w-full max-w-2xl text-center"
+            >
               <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
                 Tes choix
               </span>
@@ -1492,8 +1460,6 @@ export default function LandingPage({
                 par les recruteurs.
               </p>
             </div>
-
-            {/* MOBILE : CAROUSEL HORIZONTAL */}
 
             <div
               className="
@@ -1563,8 +1529,6 @@ export default function LandingPage({
               )}
             </div>
 
-            {/* MOBILE SCROLL HINT */}
-
             <div
               className="
                 mt-2
@@ -1586,15 +1550,11 @@ export default function LandingPage({
           </div>
         </section>
 
-        {/* =====================================================
-            CTA
-        ====================================================== */}
+        {/* CTA */}
 
-        <section
-          data-scroll-reveal
-          className="py-20 sm:py-32"
-        >
+        <section className="py-20 sm:py-32">
           <div
+            data-scroll-reveal
             className="
               mx-auto
               w-full
@@ -1695,13 +1655,10 @@ export default function LandingPage({
           </div>
         </section>
 
-        {/* =====================================================
-            FAQ
-        ====================================================== */}
+        {/* FAQ */}
 
         <section
           id="faq"
-          data-scroll-reveal
           className="
             scroll-mt-20
             border-t
@@ -1721,7 +1678,10 @@ export default function LandingPage({
               sm:px-8
             "
           >
-            <div className="text-center">
+            <div
+              data-scroll-reveal
+              className="text-center"
+            >
               <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
                 FAQ
               </span>
@@ -1841,11 +1801,9 @@ export default function LandingPage({
           FOOTER
       ====================================================== */}
 
-      <footer
-        data-scroll-reveal
-        className="w-full border-t border-slate-200 bg-white"
-      >
+      <footer className="w-full border-t border-slate-200 bg-white">
         <div
+          data-scroll-reveal
           className="
             mx-auto
             flex
@@ -1862,8 +1820,6 @@ export default function LandingPage({
             lg:px-10
           "
         >
-          {/* LOGO */}
-
           <div className="flex items-center gap-2.5">
             <div
               className="
@@ -1891,8 +1847,6 @@ export default function LandingPage({
               </div>
             </div>
           </div>
-
-          {/* LINKS */}
 
           <div
             className="
@@ -1931,8 +1885,6 @@ export default function LandingPage({
               Les données restent dans ton navigateur
             </span>
           </div>
-
-          {/* SOCIAL + LEGAL */}
 
           <div
             className="
@@ -2040,8 +1992,6 @@ export default function LandingPage({
             </button>
           </div>
         </div>
-
-        {/* COPYRIGHT */}
 
         <div className="border-t border-slate-100">
           <div
