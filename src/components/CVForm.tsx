@@ -1330,19 +1330,38 @@ export default function CVForm({
 
           <div>
             <label
-              className={labelCls}
+              className={`${labelCls} flex items-center justify-between`}
             >
-              Date de naissance
+              <span>Date de naissance</span>
+
+              {data.birthDate && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    update(
+                      'birthDate',
+                      ''
+                    )
+                  }
+                  className="
+                    normal-case
+                    tracking-normal
+                    text-[10px]
+                    font-medium
+                    text-slate-400
+                    hover:text-slate-700
+                    transition
+                  "
+                >
+                  Effacer
+                </button>
+              )}
             </label>
 
             <input
               type="date"
-              className={
-                inputCls
-              }
-              value={
-                data.birthDate
-              }
+              className={inputCls}
+              value={data.birthDate || ''}
               onChange={(e) =>
                 update(
                   'birthDate',
