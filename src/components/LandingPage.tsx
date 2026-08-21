@@ -34,7 +34,7 @@ import {
 import CVTemplateThumbnail from '@/components/CVTemplateThumbnail';
 
 interface LandingPageProps {
-  onStart: () => void;
+  onStart: (template?: TemplateId) => void;
   onLegal: () => void;
   onPrivacy: () => void;
 }
@@ -605,7 +605,7 @@ export default function LandingPage({
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
-              onClick={onStart}
+              onClick={() => onStart()}
               className="
                 hidden
                 items-center
@@ -730,7 +730,7 @@ export default function LandingPage({
 
               <button
                 type="button"
-                onClick={onStart}
+                onClick={() => onStart()}
                 className="
                   mt-2
                   w-full
@@ -946,7 +946,7 @@ export default function LandingPage({
                 >
                   <button
                     type="button"
-                    onClick={onStart}
+                    onClick={() => onStart()}
                     className="
                       group
                       inline-flex
@@ -1322,7 +1322,7 @@ export default function LandingPage({
 
                 <button
                   type="button"
-                  onClick={onStart}
+                  onClick={() => onStart()}
                   className="
                     mt-7
                     inline-flex
@@ -1506,9 +1506,7 @@ export default function LandingPage({
                       template={template}
                       data={emptyCV}
                       onClick={() => {
-                        setActiveTheme(
-                          template
-                        );
+                        onStart(template);
 
                         window.scrollTo({
                           top: 0,
@@ -1630,7 +1628,7 @@ export default function LandingPage({
 
                 <button
                   type="button"
-                  onClick={onStart}
+                  onClick={() => onStart()}
                   className="
                     mt-8
                     inline-flex

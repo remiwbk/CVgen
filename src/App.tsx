@@ -102,17 +102,24 @@ export default function App() {
   const [route, setRoute] =
     useState<AppRoute>(getRoute);
 
-  const openEditor = useCallback(() => {
-    window.history.pushState(
-      {},
-      '',
-      '/app'
-    );
+  const openEditor = useCallback(
+    (selectedTemplate?: TemplateId) => {
+      if (selectedTemplate) {
+        setTemplate(selectedTemplate);
+      }
 
-    setRoute('editor');
+      window.history.pushState(
+        {},
+        '',
+        '/app'
+      );
 
-    window.scrollTo(0, 0);
-  }, []);
+      setRoute('editor');
+
+      window.scrollTo(0, 0);
+    },
+    []
+  );
 
   const goToLanding = useCallback(() => {
     window.history.pushState(
