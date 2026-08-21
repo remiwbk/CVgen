@@ -7,6 +7,11 @@ import {
   Github,
 } from 'lucide-react';
 
+import {
+  useDroppable,
+  useDndContext,
+} from '@dnd-kit/core';
+
 import type {
   CVData,
   ThemeColors,
@@ -23,22 +28,50 @@ interface Props {
     body: string;
   };
   fontScale: number;
-
   captureMode?: boolean;
 }
+
+/**
+ * =========================================================
+ * ORDRE PAR DÉFAUT
+ * =========================================================
+ */
+
+const DEFAULT_SECTION_ORDER: CVSectionId[] = [
+  'summary',
+  'experiences',
+  'education',
+  'skills',
+  'projects',
+  'interests',
+];
+
+/**
+ * =========================================================
+ * CALCUL ÂGE
+ * =========================================================
+ */
 
 function calculateAge(
   birthDate?: string
 ): number | null {
-  if (!birthDate) return null;
-
-  const birth = new Date(birthDate);
-
-  if (Number.isNaN(birth.getTime())) {
+  if (!birthDate) {
     return null;
   }
 
-  const today = new Date();
+  const birth =
+    new Date(birthDate);
+
+  if (
+    Number.isNaN(
+      birth.getTime()
+    )
+  ) {
+    return null;
+  }
+
+  const today =
+    new Date();
 
   let age =
     today.getFullYear() -
@@ -47,17 +80,86 @@ function calculateAge(
   const hasHadBirthday =
     today.getMonth() >
       birth.getMonth() ||
-    (today.getMonth() ===
-      birth.getMonth() &&
+    (
+      today.getMonth() ===
+        birth.getMonth() &&
       today.getDate() >=
-        birth.getDate());
+        birth.getDate()
+    );
 
   if (!hasHadBirthday) {
     age--;
   }
 
-  return age >= 0 ? age : null;
+  return age >= 0
+    ? age
+    : null;
 }
+
+/**
+ * =========================================================
+ * ZONE DE FIN DROPPABLE
+ * =========================================================
+ */
+
+function ClassicBottomDropZone() {
+  const {
+    setNodeRef,
+    isOver,
+  } = useDroppable({
+    id: 'section-column-bottom',
+  });
+
+  const {
+    active,
+  } = useDndContext();
+
+  const isDragging =
+    Boolean(active);
+
+  return (
+    <div
+      ref={setNodeRef}
+      className="
+        relative
+        w-full
+        h-6
+        mt-1
+      "
+    >
+      {isDragging &&
+        isOver && (
+          <div
+            className="
+              pointer-events-none
+
+              absolute
+              left-0
+              right-0
+              top-1/2
+              -translate-y-1/2
+
+              z-[100]
+
+              h-[3px]
+
+              rounded-full
+
+              bg-slate-900
+
+              shadow-sm
+            "
+          />
+        )}
+    </div>
+  );
+}
+
+/**
+ * =========================================================
+ * TEMPLATE
+ * =========================================================
+ */
 
 export default function ClassicTemplate({
   data,
@@ -75,9 +177,10 @@ export default function ClassicTemplate({
         category.items.length > 0
     );
 
-  const age = calculateAge(
-    data.birthDate
-  );
+  const age =
+    calculateAge(
+      data.birthDate
+    );
 
   /**
    * =========================================================
@@ -85,19 +188,10 @@ export default function ClassicTemplate({
    * =========================================================
    */
 
-  const defaultSectionOrder: CVSectionId[] = [
-    'summary',
-    'experiences',
-    'education',
-    'skills',
-    'projects',
-    'interests',
-  ];
-
   const sectionOrder: CVSectionId[] =
     data.sectionOrder?.length
       ? data.sectionOrder
-      : defaultSectionOrder;
+      : DEFAULT_SECTION_ORDER;
 
   /**
    * =========================================================
@@ -140,7 +234,8 @@ export default function ClassicTemplate({
                     fonts.heading,
                   color:
                     colors.primary,
-                  fontSize: fs(17),
+                  fontSize:
+                    fs(17),
                 }}
                 className="
                   font-bold
@@ -154,8 +249,10 @@ export default function ClassicTemplate({
 
               <p
                 style={{
-                  fontSize: fs(13),
-                  color: colors.text,
+                  fontSize:
+                    fs(13),
+                  color:
+                    colors.text,
                   whiteSpace:
                     'pre-line',
                 }}
@@ -178,7 +275,8 @@ export default function ClassicTemplate({
 
       case 'experiences':
         if (
-          data.experiences.length === 0
+          data.experiences.length ===
+          0
         ) {
           return null;
         }
@@ -203,7 +301,8 @@ export default function ClassicTemplate({
                     fonts.heading,
                   color:
                     colors.primary,
-                  fontSize: fs(17),
+                  fontSize:
+                    fs(17),
                 }}
                 className="
                   font-bold
@@ -291,7 +390,8 @@ export default function ClassicTemplate({
 
       case 'education':
         if (
-          data.education.length === 0
+          data.education.length ===
+          0
         ) {
           return null;
         }
@@ -316,7 +416,8 @@ export default function ClassicTemplate({
                     fonts.heading,
                   color:
                     colors.primary,
-                  fontSize: fs(17),
+                  fontSize:
+                    fs(17),
                 }}
                 className="
                   font-bold
@@ -437,7 +538,8 @@ export default function ClassicTemplate({
                     fonts.heading,
                   color:
                     colors.primary,
-                  fontSize: fs(17),
+                  fontSize:
+                    fs(17),
                 }}
                 className="
                   font-bold
@@ -455,7 +557,9 @@ export default function ClassicTemplate({
                     cat.items.length >
                       0 && (
                       <div
-                        key={cat.id}
+                        key={
+                          cat.id
+                        }
                         className="
                           flex
                           gap-2
@@ -506,7 +610,8 @@ export default function ClassicTemplate({
 
       case 'projects':
         if (
-          data.projects.length === 0
+          data.projects.length ===
+          0
         ) {
           return null;
         }
@@ -531,7 +636,8 @@ export default function ClassicTemplate({
                     fonts.heading,
                   color:
                     colors.primary,
-                  fontSize: fs(17),
+                  fontSize:
+                    fs(17),
                 }}
                 className="
                   font-bold
@@ -630,7 +736,8 @@ export default function ClassicTemplate({
 
       case 'interests':
         if (
-          data.interests.length === 0
+          data.interests.length ===
+          0
         ) {
           return null;
         }
@@ -655,7 +762,8 @@ export default function ClassicTemplate({
                     fonts.heading,
                   color:
                     colors.primary,
-                  fontSize: fs(17),
+                  fontSize:
+                    fs(17),
                 }}
                 className="
                   font-bold
@@ -669,7 +777,8 @@ export default function ClassicTemplate({
 
               <p
                 style={{
-                  fontSize: fs(13),
+                  fontSize:
+                    fs(13),
                   whiteSpace:
                     'pre-line',
                 }}
@@ -699,9 +808,12 @@ export default function ClassicTemplate({
   return (
     <div
       style={{
-        fontFamily: fonts.body,
-        color: colors.text,
-        fontSize: fs(14),
+        fontFamily:
+          fonts.body,
+        color:
+          colors.text,
+        fontSize:
+          fs(14),
       }}
       className="
         w-full
@@ -740,7 +852,8 @@ export default function ClassicTemplate({
                 fonts.heading,
               color:
                 colors.primary,
-              fontSize: fs(36),
+              fontSize:
+                fs(36),
             }}
             className="
               font-bold
@@ -752,7 +865,8 @@ export default function ClassicTemplate({
 
           <p
             style={{
-              fontSize: fs(18),
+              fontSize:
+                fs(18),
               color:
                 colors.muted,
             }}
@@ -767,7 +881,8 @@ export default function ClassicTemplate({
 
           <div
             style={{
-              fontSize: fs(12),
+              fontSize:
+                fs(12),
               color:
                 colors.muted,
             }}
@@ -786,7 +901,8 @@ export default function ClassicTemplate({
                   gap-1
                 "
                 style={{
-                  color: 'inherit',
+                  color:
+                    'inherit',
                 }}
               >
                 <Mail className="w-3 h-3" />
@@ -803,7 +919,8 @@ export default function ClassicTemplate({
                   gap-1
                 "
                 style={{
-                  color: 'inherit',
+                  color:
+                    'inherit',
                 }}
               >
                 <Phone className="w-3 h-3" />
@@ -853,7 +970,8 @@ export default function ClassicTemplate({
                   gap-1
                 "
                 style={{
-                  color: 'inherit',
+                  color:
+                    'inherit',
                 }}
               >
                 <Globe className="w-3 h-3" />
@@ -878,7 +996,8 @@ export default function ClassicTemplate({
                   gap-1
                 "
                 style={{
-                  color: 'inherit',
+                  color:
+                    'inherit',
                 }}
               >
                 <Linkedin className="w-3 h-3" />
@@ -903,7 +1022,8 @@ export default function ClassicTemplate({
                   gap-1
                 "
                 style={{
-                  color: 'inherit',
+                  color:
+                    'inherit',
                 }}
               >
                 <Github className="w-3 h-3" />
@@ -927,11 +1047,13 @@ export default function ClassicTemplate({
             style={{
               width: `${
                 112 *
-                (data.photoScale ?? 1)
+                (data.photoScale ??
+                  1)
               }px`,
               height: `${
                 112 *
-                (data.photoScale ?? 1)
+                (data.photoScale ??
+                  1)
               }px`,
               borderColor:
                 colors.primary,
@@ -955,6 +1077,14 @@ export default function ClassicTemplate({
             renderSection(
               sectionId
             )
+        )}
+
+        {/* ===================================================
+            ZONE DE FIN
+        ==================================================== */}
+
+        {!captureMode && (
+          <ClassicBottomDropZone />
         )}
       </div>
     </div>

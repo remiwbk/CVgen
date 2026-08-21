@@ -44,7 +44,6 @@ interface Props {
  * =========================================================
  *
  * On conserve exactement l'ordre global du CV.
- * =========================================================
  */
 
 const DEFAULT_SECTION_ORDER: CVSectionId[] = [
@@ -93,8 +92,23 @@ const DEFAULT_SECTION_COLUMNS: Record<
 
 /**
  * =========================================================
+ * TYPES COLONNES
+ * =========================================================
+ */
+
+type ModernColumnId =
+  | 'section-column-left'
+  | 'section-column-right';
+
+/**
+ * =========================================================
  * COLONNE DROPPABLE
  * =========================================================
+ *
+ * Chaque colonne possède :
+ *
+ * 1. sa zone principale ;
+ * 2. une vraie zone finale "bottom".
  */
 
 function ModernColumn({
@@ -102,12 +116,8 @@ function ModernColumn({
   children,
   className,
 }: {
-  id:
-    | 'section-column-left'
-    | 'section-column-right';
-
+  id: ModernColumnId;
   children: React.ReactNode;
-
   className?: string;
 }) {
   const {
@@ -117,6 +127,21 @@ function ModernColumn({
     id,
   });
 
+  const bottomId =
+    id ===
+    'section-column-left'
+      ? 'section-column-bottom-left'
+      : 'section-column-bottom-right';
+
+  const {
+    setNodeRef:
+      setBottomNodeRef,
+    isOver:
+      isBottomOver,
+  } = useDroppable({
+    id: bottomId,
+  });
+
   return (
     <div
       ref={setNodeRef}
@@ -124,6 +149,7 @@ function ModernColumn({
         relative
         min-w-0
         min-h-full
+        w-full
         rounded-sm
         transition
 
@@ -136,7 +162,48 @@ function ModernColumn({
         ${className ?? ''}
       `}
     >
+      {/* ===================================================
+          CONTENU DE LA COLONNE
+      ==================================================== */}
+
       {children}
+
+      {/* ===================================================
+          ZONE D'INSERTION FINALE
+      ==================================================== */}
+
+      <div
+        ref={setBottomNodeRef}
+        className="
+          relative
+          w-full
+          h-4
+          mt-0
+        "
+      >
+        {isBottomOver && (
+          <div
+            className="
+              pointer-events-none
+              absolute
+              left-0
+              right-0
+              top-1/2
+              -translate-y-1/2
+
+              z-[100]
+
+              h-[3px]
+
+              rounded-full
+
+              bg-slate-900
+
+              shadow-sm
+            "
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -150,7 +217,9 @@ function ModernColumn({
 function calculateAge(
   birthDate: string | undefined
 ): number | null {
-  if (!birthDate) return null;
+  if (!birthDate) {
+    return null;
+  }
 
   const birth =
     new Date(birthDate);
@@ -248,6 +317,8 @@ export default function ModernTemplate({
    * =========================================================
    * ORDRE DANS CHAQUE COLONNE
    * =========================================================
+   *
+   * On conserve l'ordre relatif de sectionOrder.
    */
 
   const leftOrder =
@@ -719,7 +790,12 @@ export default function ModernTemplate({
                         }}
                       />
 
-                      <div className="flex items-baseline justify-between gap-3">
+                      <div className="
+                        flex
+                        items-baseline
+                        justify-between
+                        gap-3
+                      ">
                         <h3
                           style={{
                             fontSize:
@@ -851,7 +927,12 @@ export default function ModernTemplate({
                         ed.id
                       }
                     >
-                      <div className="flex items-baseline justify-between gap-3">
+                      <div className="
+                        flex
+                        items-baseline
+                        justify-between
+                        gap-3
+                      ">
                         <h3
                           style={{
                             fontSize:
@@ -1067,7 +1148,6 @@ export default function ModernTemplate({
               "
             >
               <Mail className="w-4 h-4" />
-
               <span>
                 {
                   data.email
@@ -1096,7 +1176,6 @@ export default function ModernTemplate({
               "
             >
               <Phone className="w-4 h-4" />
-
               <span>
                 {
                   data.phone
@@ -1115,7 +1194,6 @@ export default function ModernTemplate({
               "
             >
               <MapPin className="w-4 h-4" />
-
               <span>
                 {
                   data.location
@@ -1134,7 +1212,6 @@ export default function ModernTemplate({
               "
             >
               <Calendar className="w-4 h-4" />
-
               <span>
                 {
                   age
@@ -1153,7 +1230,6 @@ export default function ModernTemplate({
               "
             >
               <Car className="w-4 h-4" />
-
               <span>
                 Permis B
               </span>
@@ -1185,7 +1261,6 @@ export default function ModernTemplate({
               "
             >
               <Globe className="w-4 h-4" />
-
               <span>
                 {
                   data.website
@@ -1219,7 +1294,6 @@ export default function ModernTemplate({
               "
             >
               <Linkedin className="w-4 h-4" />
-
               <span>
                 {
                   data.linkedin
@@ -1253,7 +1327,6 @@ export default function ModernTemplate({
               "
             >
               <Github className="w-4 h-4" />
-
               <span>
                 {
                   data.github
@@ -1268,15 +1341,17 @@ export default function ModernTemplate({
           CONTENT
       ====================================================== */}
 
-      <div className="
-        px-10
-        py-8
-        grid
-        grid-cols-3
-        gap-8
-      ">
+      <div
+        className="
+          px-10
+          py-8
+          grid
+          grid-cols-3
+          gap-8
+        "
+      >
         {/* ===================================================
-            LEFT — 1/3 EXACTEMENT COMME L'ORIGINAL
+            LEFT — 1/3
         ==================================================== */}
 
         <ModernColumn
@@ -1291,9 +1366,11 @@ export default function ModernTemplate({
               verticalListSortingStrategy
             }
           >
-            <aside className="
-              space-y-7
-            ">
+            <aside
+              className="
+                space-y-7
+              "
+            >
               {leftOrder.map(
                 (sectionId) =>
                   renderSection(
@@ -1305,7 +1382,7 @@ export default function ModernTemplate({
         </ModernColumn>
 
         {/* ===================================================
-            RIGHT — 2/3 EXACTEMENT COMME L'ORIGINAL
+            RIGHT — 2/3
         ==================================================== */}
 
         <ModernColumn
@@ -1320,9 +1397,11 @@ export default function ModernTemplate({
               verticalListSortingStrategy
             }
           >
-            <main className="
-              space-y-7
-            ">
+            <main
+              className="
+                space-y-7
+              "
+            >
               {rightOrder.map(
                 (sectionId) =>
                   renderSection(

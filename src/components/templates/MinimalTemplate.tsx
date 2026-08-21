@@ -9,6 +9,15 @@ import {
   Car,
 } from 'lucide-react';
 
+import {
+  useDroppable,
+} from '@dnd-kit/core';
+
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+
 import type {
   CVData,
   ThemeColors,
@@ -28,6 +37,12 @@ interface Props {
   captureMode?: boolean;
 }
 
+/**
+ * =========================================================
+ * ORDRE PAR DÉFAUT
+ * =========================================================
+ */
+
 const DEFAULT_SECTION_ORDER: CVSectionId[] = [
   'summary',
   'experiences',
@@ -36,6 +51,71 @@ const DEFAULT_SECTION_ORDER: CVSectionId[] = [
   'projects',
   'interests',
 ];
+
+/**
+ * =========================================================
+ * COLONNE / ZONE FINALE
+ * =========================================================
+ *
+ * Minimal est un template mono-colonne.
+ *
+ * On conserve exactement son layout original.
+ *
+ * La seule modification est l'ajout d'une vraie
+ * zone droppable à la toute fin des sections.
+ * =========================================================
+ */
+
+function MinimalBottomDropZone() {
+  const {
+    setNodeRef,
+    isOver,
+  } = useDroppable({
+    id: 'section-column-bottom',
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className="
+        relative
+        w-full
+        h-4
+      "
+    >
+      {isOver && (
+        <div
+          className="
+            pointer-events-none
+
+            absolute
+            left-0
+            right-0
+
+            top-1/2
+            -translate-y-1/2
+
+            z-[100]
+
+            h-[3px]
+
+            rounded-full
+
+            bg-slate-900
+
+            shadow-sm
+          "
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * =========================================================
+ * CALCUL ÂGE
+ * =========================================================
+ */
 
 function calculateAge(
   birthDate: string
@@ -81,6 +161,12 @@ function calculateAge(
     : null;
 }
 
+/**
+ * =========================================================
+ * TEMPLATE
+ * =========================================================
+ */
+
 export default function MinimalTemplate({
   data,
   colors,
@@ -107,6 +193,16 @@ export default function MinimalTemplate({
   /**
    * =========================================================
    * ORDRE DES SECTIONS
+   * =========================================================
+   *
+   * L'ordre par défaut reste exactement :
+   *
+   * Profil
+   * Expériences
+   * Formation
+   * Compétences
+   * Projets
+   * Centres d'intérêt
    * =========================================================
    */
 
@@ -226,7 +322,9 @@ export default function MinimalTemplate({
                 {data.experiences.map(
                   (exp) => (
                     <div
-                      key={exp.id}
+                      key={
+                        exp.id
+                      }
                       className="
                         grid
                         grid-cols-4
@@ -336,7 +434,9 @@ export default function MinimalTemplate({
                 {data.education.map(
                   (ed) => (
                     <div
-                      key={ed.id}
+                      key={
+                        ed.id
+                      }
                       className="
                         grid
                         grid-cols-4
@@ -740,13 +840,15 @@ export default function MinimalTemplate({
           HEADER
       ====================================================== */}
 
-      <header className="
-        mb-9
-        flex
-        items-start
-        justify-between
-        gap-6
-      ">
+      <header
+        className="
+          mb-9
+          flex
+          items-start
+          justify-between
+          gap-6
+        "
+      >
         <div className="flex-1">
           <h1
             style={{
@@ -977,13 +1079,30 @@ export default function MinimalTemplate({
           SECTIONS
       ====================================================== */}
 
-      <div className="space-y-8">
-        {sectionOrder.map(
-          (sectionId) =>
-            renderSection(
-              sectionId
-            )
-        )}
+      <div
+        className="
+          space-y-8
+        "
+      >
+        <SortableContext
+          items={
+            sectionOrder
+          }
+          strategy={
+            verticalListSortingStrategy
+          }
+        >
+          {sectionOrder.map(
+            (sectionId) =>
+              renderSection(
+                sectionId
+              )
+          )}
+
+          {!captureMode && (
+            <MinimalBottomDropZone />
+          )}
+        </SortableContext>
       </div>
     </div>
   );

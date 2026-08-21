@@ -103,7 +103,26 @@ const DEFAULT_SECTION_COLUMNS: Record<
 
 /**
  * =========================================================
+ * TYPES
+ * =========================================================
+ */
+
+type SwissColumnId =
+  | 'section-column-left'
+  | 'section-column-right';
+
+/**
+ * =========================================================
  * COLONNE DROPPABLE
+ * =========================================================
+ *
+ * Chaque colonne possède :
+ *
+ * 1. une zone principale permettant le changement
+ *    de colonne ;
+ *
+ * 2. une zone "bottom" placée juste après le contenu
+ *    permettant de déposer une section tout en bas.
  * =========================================================
  */
 
@@ -111,10 +130,7 @@ function SwissColumn({
   id,
   children,
 }: {
-  id:
-    | 'section-column-left'
-    | 'section-column-right';
-
+  id: SwissColumnId;
   children: React.ReactNode;
 }) {
   const {
@@ -124,6 +140,21 @@ function SwissColumn({
     id,
   });
 
+  const bottomId =
+    id ===
+    'section-column-left'
+      ? 'section-column-bottom-left'
+      : 'section-column-bottom-right';
+
+  const {
+    setNodeRef:
+      setBottomNodeRef,
+    isOver:
+      isBottomOver,
+  } = useDroppable({
+    id: bottomId,
+  });
+
   return (
     <div
       ref={setNodeRef}
@@ -131,6 +162,7 @@ function SwissColumn({
         relative
         min-w-0
         min-h-full
+        w-full
         rounded-sm
         transition
 
@@ -141,7 +173,50 @@ function SwissColumn({
         }
       `}
     >
+      {/* ===================================================
+          CONTENU
+      ==================================================== */}
+
       {children}
+
+      {/* ===================================================
+          ZONE FINALE
+      ==================================================== */}
+
+      <div
+        ref={setBottomNodeRef}
+        className="
+          relative
+          w-full
+          h-4
+          mt-0
+        "
+      >
+        {isBottomOver && (
+          <div
+            className="
+              pointer-events-none
+              absolute
+
+              left-0
+              right-0
+
+              top-1/2
+              -translate-y-1/2
+
+              z-[100]
+
+              h-[3px]
+
+              rounded-full
+
+              bg-slate-900
+
+              shadow-sm
+            "
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -230,7 +305,7 @@ export default function SwissTemplate({
    * l'ordre global par défaut, on restitue le
    * layout historique du Swiss.
    *
-   * Dès que l'ordre a été modifié par le DnD,
+   * Dès qu'un ordre a été modifié par le DnD,
    * sectionOrder devient la source de vérité.
    * =========================================================
    */
@@ -300,22 +375,25 @@ export default function SwissTemplate({
    * La numérotation suit la position réelle
    * dans le layout.
    *
-   * Gauche :
-   *   01 / 02 / 03
+   * Gauche puis droite.
    *
-   * Droite :
-   *   04 / 05 / 06
+   * Exemple par défaut :
    *
-   * Si une section n'est pas présente, les numéros
-   * se recalculent automatiquement.
+   * 01 Profil
+   * 02 Compétences
+   * 03 Intérêts
+   * 04 Expériences
+   * 05 Formation
+   * 06 Projets
+   *
+   * Elle se recalcule automatiquement.
    * =========================================================
    */
 
-  const visibleSectionOrder =
-    [
-      ...leftOrder,
-      ...rightOrder,
-    ];
+  const visibleSectionOrder = [
+    ...leftOrder,
+    ...rightOrder,
+  ];
 
   const getSectionNumber = (
     sectionId: CVSectionId
@@ -565,11 +643,13 @@ export default function SwissTemplate({
                         exp.id
                       }
                     >
-                      <div className="
-                        grid
-                        grid-cols-[1fr_auto]
-                        gap-5
-                      ">
+                      <div
+                        className="
+                          grid
+                          grid-cols-[1fr_auto]
+                          gap-5
+                        "
+                      >
                         <div>
                           <h3
                             style={{
@@ -687,11 +767,13 @@ export default function SwissTemplate({
                         ed.id
                       }
                     >
-                      <div className="
-                        grid
-                        grid-cols-[1fr_auto]
-                        gap-5
-                      ">
+                      <div
+                        className="
+                          grid
+                          grid-cols-[1fr_auto]
+                          gap-5
+                        "
+                      >
                         <div>
                           <h3
                             style={{
@@ -884,6 +966,12 @@ export default function SwissTemplate({
     }
   };
 
+  /**
+   * =========================================================
+   * RENDER
+   * =========================================================
+   */
+
   return (
     <div
       style={{
@@ -905,12 +993,14 @@ export default function SwissTemplate({
           HEADER
       ====================================================== */}
 
-      <header className="
-        grid
-        grid-cols-[auto_1fr_auto]
-        gap-7
-        items-start
-      ">
+      <header
+        className="
+          grid
+          grid-cols-[auto_1fr_auto]
+          gap-7
+          items-start
+        "
+      >
         {data.photo ? (
           <img
             src={data.photo}
@@ -1010,9 +1100,7 @@ export default function SwissTemplate({
               "
             >
               <Mail className="w-3 h-3" />
-              {
-                data.email
-              }
+              {data.email}
             </a>
           )}
 
@@ -1036,9 +1124,7 @@ export default function SwissTemplate({
               "
             >
               <Phone className="w-3 h-3" />
-              {
-                data.phone
-              }
+              {data.phone}
             </a>
           )}
 
@@ -1052,9 +1138,7 @@ export default function SwissTemplate({
               "
             >
               <MapPin className="w-3 h-3" />
-              {
-                data.location
-              }
+              {data.location}
             </span>
           )}
 
@@ -1068,9 +1152,7 @@ export default function SwissTemplate({
               "
             >
               <Calendar className="w-3 h-3" />
-              {
-                age
-              } ans
+              {age} ans
             </span>
           )}
 
@@ -1113,9 +1195,7 @@ export default function SwissTemplate({
               "
             >
               <Globe className="w-3 h-3" />
-              {
-                data.website
-              }
+              {data.website}
             </a>
           )}
 
@@ -1144,9 +1224,7 @@ export default function SwissTemplate({
               "
             >
               <Linkedin className="w-3 h-3" />
-              {
-                data.linkedin
-              }
+              {data.linkedin}
             </a>
           )}
 
@@ -1175,9 +1253,7 @@ export default function SwissTemplate({
               "
             >
               <Github className="w-3 h-3" />
-              {
-                data.github
-              }
+              {data.github}
             </a>
           )}
         </div>
@@ -1202,12 +1278,14 @@ export default function SwissTemplate({
           CONTENT
       ====================================================== */}
 
-      <div className="
-        grid
-        grid-cols-[0.38fr_0.62fr]
-        gap-10
-        mt-7
-      ">
+      <div
+        className="
+          grid
+          grid-cols-[0.38fr_0.62fr]
+          gap-10
+          mt-7
+        "
+      >
         {/* ===================================================
             LEFT
         ==================================================== */}

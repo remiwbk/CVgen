@@ -11,6 +11,7 @@ import {
 
 import {
   useDroppable,
+  useDndContext,
 } from '@dnd-kit/core';
 
 import {
@@ -62,6 +63,17 @@ const DEFAULT_SECTION_COLUMNS: Record<
 
 /**
  * =========================================================
+ * IDS DES ZONES DE FIN
+ * =========================================================
+ */
+
+const SECTION_COLUMN_BOTTOM_IDS = {
+  left: 'section-column-bottom-left',
+  right: 'section-column-bottom-right',
+} as const;
+
+/**
+ * =========================================================
  * COLONNE DROPPABLE
  * =========================================================
  */
@@ -83,6 +95,27 @@ function EditorialColumn({
     id,
   });
 
+  const {
+    active,
+  } = useDndContext();
+
+  const isDragging =
+    Boolean(active);
+
+  const bottomId =
+    id === 'section-column-left'
+      ? SECTION_COLUMN_BOTTOM_IDS.left
+      : SECTION_COLUMN_BOTTOM_IDS.right;
+
+  const {
+    setNodeRef:
+      setBottomNodeRef,
+    isOver:
+      isBottomOver,
+  } = useDroppable({
+    id: bottomId,
+  });
+
   return (
     <div
       ref={setNodeRef}
@@ -101,7 +134,53 @@ function EditorialColumn({
         }
       `}
     >
-      {children}
+      <div className="relative">
+        {children}
+      </div>
+
+      {/* =================================================
+          INTERSECTION FINALE
+      =================================================
+      
+          Cette zone permet de déposer une section
+          tout en bas de cette colonne.
+      */}
+
+      {isDragging && (
+        <div
+          ref={setBottomNodeRef}
+          className="
+            relative
+            w-full
+            h-5
+            mt-1
+          "
+        >
+          {isBottomOver && (
+            <div
+              className="
+                pointer-events-none
+
+                absolute
+                left-0
+                right-0
+                top-1/2
+                -translate-y-1/2
+
+                z-[100]
+
+                h-[3px]
+
+                rounded-full
+
+                bg-slate-900
+
+                shadow-sm
+              "
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -962,8 +1041,6 @@ export default function EditorialTemplate({
                 ) : null
             )}
 
-            {/* ÂGE */}
-
             {age !== null && (
               <span
                 className="
@@ -979,8 +1056,6 @@ export default function EditorialTemplate({
                 {age} ans
               </span>
             )}
-
-            {/* PERMIS B */}
 
             {data.hasDrivingLicense && (
               <span

@@ -89,6 +89,20 @@ const SECTION_COLUMN_IDS = {
   right: 'section-column-right',
 } as const;
 
+const SECTION_COLUMN_BOTTOM_IDS = {
+  left: 'section-column-bottom-left',
+  right: 'section-column-bottom-right',
+} as const;
+
+const TWO_COLUMN_TEMPLATES: TemplateId[] = [
+  'corporate',
+  'editorial',
+  'executive',
+  'modern',
+  'swiss',
+  'tech',
+];
+
 const DEFAULT_SECTION_COLUMNS: Record<
   CVSectionId,
   CVSectionColumn
@@ -355,12 +369,9 @@ const CVPreview = forwardRef<
      */
 
     const isTwoColumnTemplate =
-      template === 'corporate' ||
-      template === 'editorial' ||
-      template === 'executive' ||
-      template === 'modern' ||
-      template === 'swiss' ||
-      template === 'tech';
+      TWO_COLUMN_TEMPLATES.includes(
+        template
+      );
 
     /**
      * =========================================================
@@ -391,11 +402,13 @@ const CVPreview = forwardRef<
       (args) => {
         /**
          * =====================================================
-         * TEMPLATES NORMAUX
+         * TEMPLATES MONO-COLONNE
          * =====================================================
          */
 
-        if (!isTwoColumnTemplate) {
+        if (
+          !isTwoColumnTemplate
+        ) {
           const pointerCollisions =
             pointerWithin(args);
 
@@ -417,7 +430,7 @@ const CVPreview = forwardRef<
          * =====================================================
          *
          * X = colonne
-         * Y = section dans cette colonne
+         * Y = section
          */
 
         const pointer =
@@ -510,10 +523,6 @@ const CVPreview = forwardRef<
           }
         }
 
-        /**
-         * Aucun bloc sous le curseur.
-         */
-
         if (
           !targetColumn ||
           !targetColumnId ||
@@ -547,7 +556,7 @@ const CVPreview = forwardRef<
             );
 
           /**
-           * Ce ne sont pas des sections.
+           * On ignore les deux colonnes.
            */
 
           if (
@@ -560,8 +569,20 @@ const CVPreview = forwardRef<
           }
 
           /**
-           * L'ID n'est pas une section
-           * connue.
+           * On ignore les zones de fin.
+           */
+
+          if (
+            id ===
+              SECTION_COLUMN_BOTTOM_IDS.left ||
+            id ===
+              SECTION_COLUMN_BOTTOM_IDS.right
+          ) {
+            continue;
+          }
+
+          /**
+           * ID inconnu.
            */
 
           if (
@@ -576,8 +597,8 @@ const CVPreview = forwardRef<
             id as CVSectionId;
 
           /**
-           * La section doit appartenir
-           * à la colonne sous le curseur.
+           * La section doit être dans
+           * la colonne sous le curseur.
            */
 
           if (
@@ -604,11 +625,6 @@ const CVPreview = forwardRef<
           });
         }
 
-        /**
-         * Important :
-         * on trie uniquement par Y.
-         */
-
         sectionCandidates.sort(
           (a, b) =>
             a.rect.top -
@@ -617,7 +633,7 @@ const CVPreview = forwardRef<
 
         /**
          * -----------------------------------------------------
-         * CURSEUR DIRECTEMENT DANS UNE SECTION
+         * CURSEUR DANS UNE SECTION
          * -----------------------------------------------------
          */
 
@@ -642,7 +658,6 @@ const CVPreview = forwardRef<
               {
                 id:
                   candidate.id,
-
                 rect:
                   candidate.rect,
               },
@@ -652,11 +667,11 @@ const CVPreview = forwardRef<
 
         /**
          * -----------------------------------------------------
-         * CURSEUR ENTRE DEUX SECTIONS
+         * ENTRE DEUX SECTIONS
          * -----------------------------------------------------
          *
-         * On choisit la première section
-         * située sous le curseur.
+         * La première section située sous
+         * le curseur devient la cible.
          */
 
         for (
@@ -671,7 +686,6 @@ const CVPreview = forwardRef<
               {
                 id:
                   candidate.id,
-
                 rect:
                   candidate.rect,
               },
@@ -681,7 +695,7 @@ const CVPreview = forwardRef<
 
         /**
          * -----------------------------------------------------
-         * CURSEUR SOUS LA DERNIÈRE SECTION
+         * ZONE FINALE DE LA COLONNE
          * -----------------------------------------------------
          */
 
@@ -695,15 +709,59 @@ const CVPreview = forwardRef<
                 1
             ];
 
-          return [
-            {
-              id:
-                last.id,
+          if (
+            pointer.y >=
+            last.rect.bottom
+          ) {
+            const bottomId =
+              targetColumn ===
+              'left'
+                ? SECTION_COLUMN_BOTTOM_IDS.left
+                : SECTION_COLUMN_BOTTOM_IDS.right;
 
-              rect:
-                last.rect,
-            },
-          ];
+            const bottomContainer =
+              args.droppableContainers.find(
+                (container) =>
+                  String(
+                    container.id
+                  ) === bottomId
+              );
+
+            if (
+              bottomContainer
+            ) {
+              const bottomRect =
+                args.droppableRects.get(
+                  bottomContainer.id
+                );
+
+              if (bottomRect) {
+                return [
+                  {
+                    id:
+                      bottomContainer.id,
+                    rect:
+                      bottomRect,
+                  },
+                ];
+              }
+            }
+
+            /**
+             * Fallback :
+             * si la zone bottom n'est pas montée,
+             * la colonne reste la cible.
+             */
+
+            return [
+              {
+                id:
+                  targetColumnId,
+                rect:
+                  targetColumnRect,
+              },
+            ];
+          }
         }
 
         /**
@@ -712,11 +770,47 @@ const CVPreview = forwardRef<
          * -----------------------------------------------------
          */
 
+        const emptyBottomId =
+          targetColumn ===
+          'left'
+            ? SECTION_COLUMN_BOTTOM_IDS.left
+            : SECTION_COLUMN_BOTTOM_IDS.right;
+
+        const emptyBottomContainer =
+          args.droppableContainers.find(
+            (container) =>
+              String(
+                container.id
+              ) ===
+              emptyBottomId
+          );
+
+        if (
+          emptyBottomContainer
+        ) {
+          const emptyBottomRect =
+            args.droppableRects.get(
+              emptyBottomContainer.id
+            );
+
+          if (
+            emptyBottomRect
+          ) {
+            return [
+              {
+                id:
+                  emptyBottomContainer.id,
+                rect:
+                  emptyBottomRect,
+              },
+            ];
+          }
+        }
+
         return [
           {
             id:
               targetColumnId,
-
             rect:
               targetColumnRect,
           },
@@ -762,7 +856,9 @@ const CVPreview = forwardRef<
        * =======================================================
        */
 
-      if (isTwoColumnTemplate) {
+      if (
+        isTwoColumnTemplate
+      ) {
         const activeColumn =
           getSectionColumn(
             activeId
@@ -770,8 +866,80 @@ const CVPreview = forwardRef<
 
         /**
          * -----------------------------------------------------
+         * DROP EN BAS D'UNE COLONNE
+         * -----------------------------------------------------
+         */
+
+        if (
+          overId ===
+            SECTION_COLUMN_BOTTOM_IDS.left ||
+          overId ===
+            SECTION_COLUMN_BOTTOM_IDS.right
+        ) {
+          const targetColumn =
+            overId ===
+            SECTION_COLUMN_BOTTOM_IDS.left
+              ? 'left'
+              : 'right';
+
+          const nextOrder =
+            sectionOrder.filter(
+              (id) =>
+                id !== activeId
+            );
+
+          let insertionIndex =
+            nextOrder.length;
+
+          for (
+            let index =
+              nextOrder.length - 1;
+            index >= 0;
+            index--
+          ) {
+            if (
+              getSectionColumn(
+                nextOrder[index]
+              ) ===
+              targetColumn
+            ) {
+              insertionIndex =
+                index + 1;
+
+              break;
+            }
+          }
+
+          nextOrder.splice(
+            insertionIndex,
+            0,
+            activeId
+          );
+
+          onChange?.({
+            ...data,
+
+            sectionOrder:
+              nextOrder,
+
+            sectionColumns: {
+              ...(data.sectionColumns ??
+                {}),
+
+              [activeId]:
+                targetColumn,
+            },
+          });
+
+          return;
+        }
+
+        /**
+         * -----------------------------------------------------
          * DROP DIRECTEMENT SUR UNE COLONNE
          * -----------------------------------------------------
+         *
+         * Cas de secours / colonne vide.
          */
 
         if (
@@ -786,41 +954,18 @@ const CVPreview = forwardRef<
               ? 'left'
               : 'right';
 
-          /**
-           * Même colonne :
-           * on ne change rien.
-           */
-
-          if (
-            activeColumn ===
-            targetColumn
-          ) {
-            return;
-          }
-
-          /**
-           * Retire la section de sa
-           * position actuelle.
-           */
-
           const nextOrder =
             sectionOrder.filter(
               (id) =>
                 id !== activeId
             );
 
-          /**
-           * On la place à la fin
-           * de la colonne cible.
-           */
-
           let insertionIndex =
             nextOrder.length;
 
           for (
             let index =
-              nextOrder.length -
-              1;
+              nextOrder.length - 1;
             index >= 0;
             index--
           ) {
@@ -1030,6 +1175,58 @@ const CVPreview = forwardRef<
        * =======================================================
        */
 
+      /**
+       * -------------------------------------------------------
+       * DROP TOUT EN BAS
+       * -------------------------------------------------------
+       *
+       * La zone "section-column-bottom" est créée
+       * par MinimalTemplate.
+       *
+       * Elle signifie :
+       * "placer cette section après toutes les autres".
+       */
+
+      if (
+        String(over.id) ===
+        'section-column-bottom'
+      ) {
+        const nextOrder =
+          sectionOrder.filter(
+            (id) =>
+              id !== activeId
+          );
+
+        nextOrder.push(
+          activeId
+        );
+
+        if (
+          onSectionOrderChange
+        ) {
+          onSectionOrderChange(
+            nextOrder
+          );
+
+          return;
+        }
+
+        onChange?.({
+          ...data,
+
+          sectionOrder:
+            nextOrder,
+        });
+
+        return;
+      }
+
+      /**
+       * -------------------------------------------------------
+       * DROP SUR UNE SECTION
+       * -------------------------------------------------------
+       */
+
       const overSectionId =
         over.id as CVSectionId;
 
@@ -1081,7 +1278,6 @@ const CVPreview = forwardRef<
           newOrder,
       });
     };
-
     /**
      * =========================================================
      * FIT PREVIEW

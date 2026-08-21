@@ -5,11 +5,13 @@ import {
   Globe,
   Linkedin,
   Github,
+  Calendar,
   Car,
 } from 'lucide-react';
 
 import {
   useDroppable,
+  useDndContext,
 } from '@dnd-kit/core';
 
 import {
@@ -39,7 +41,7 @@ interface Props {
 
 /**
  * =========================================================
- * ORDRE / COLONNES PAR DÉFAUT
+ * ORDRE PAR DÉFAUT
  * =========================================================
  */
 
@@ -51,6 +53,25 @@ const DEFAULT_SECTION_ORDER: CVSectionId[] = [
   'projects',
   'interests',
 ];
+
+/**
+ * =========================================================
+ * COLONNES PAR DÉFAUT
+ * =========================================================
+ *
+ * Design original Executive :
+ *
+ * GAUCHE :
+ * - À propos
+ * - Expertise
+ * - Intérêts
+ *
+ * DROITE :
+ * - Expérience professionnelle
+ * - Formation
+ * - Réalisations & projets
+ * =========================================================
+ */
 
 const DEFAULT_SECTION_COLUMNS: Record<
   CVSectionId,
@@ -64,6 +85,17 @@ const DEFAULT_SECTION_COLUMNS: Record<
   education: 'right',
   projects: 'right',
 };
+
+/**
+ * =========================================================
+ * IDS DES ZONES DE FIN
+ * =========================================================
+ */
+
+const SECTION_COLUMN_BOTTOM_IDS = {
+  left: 'section-column-bottom-left',
+  right: 'section-column-bottom-right',
+} as const;
 
 /**
  * =========================================================
@@ -88,6 +120,28 @@ function ExecutiveColumn({
     id,
   });
 
+  const {
+    active,
+  } = useDndContext();
+
+  const isDragging =
+    Boolean(active);
+
+  const bottomId =
+    id ===
+    'section-column-left'
+      ? SECTION_COLUMN_BOTTOM_IDS.left
+      : SECTION_COLUMN_BOTTOM_IDS.right;
+
+  const {
+    setNodeRef:
+      setBottomNodeRef,
+    isOver:
+      isBottomOver,
+  } = useDroppable({
+    id: bottomId,
+  });
+
   return (
     <div
       ref={setNodeRef}
@@ -106,14 +160,60 @@ function ExecutiveColumn({
         }
       `}
     >
-      {children}
+      <div
+        className="
+          relative
+        "
+      >
+        {children}
+      </div>
+
+      {/* =====================================================
+          INTERSECTION FINALE
+      ====================================================== */}
+
+      {isDragging && (
+        <div
+          ref={setBottomNodeRef}
+          className="
+            relative
+            w-full
+            h-5
+            mt-1
+          "
+        >
+          {isBottomOver && (
+            <div
+              className="
+                pointer-events-none
+
+                absolute
+                left-0
+                right-0
+                top-1/2
+                -translate-y-1/2
+
+                z-[100]
+
+                h-[3px]
+
+                rounded-full
+
+                bg-slate-900
+
+                shadow-sm
+              "
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 /**
  * =========================================================
- * AGE
+ * CALCUL ÂGE
  * =========================================================
  */
 
@@ -821,13 +921,15 @@ export default function ExecutiveTemplate({
           HEADER
       ====================================================== */}
 
-      <header className="
-        flex
-        items-end
-        justify-between
-        gap-8
-        pb-7
-      ">
+      <header
+        className="
+          flex
+          items-end
+          justify-between
+          gap-8
+          pb-7
+        "
+      >
         <div className="flex-1">
           <p
             style={{
@@ -1082,12 +1184,19 @@ export default function ExecutiveTemplate({
           id="section-column-left"
         >
           <SortableContext
-            items={leftOrder}
+            items={
+              leftOrder
+            }
             strategy={
               verticalListSortingStrategy
             }
           >
-            <aside className="space-y-7">
+            <aside
+              className="
+                space-y-7
+                relative
+              "
+            >
               {leftOrder.map(
                 (sectionId) =>
                   renderSection(
@@ -1106,12 +1215,19 @@ export default function ExecutiveTemplate({
           id="section-column-right"
         >
           <SortableContext
-            items={rightOrder}
+            items={
+              rightOrder
+            }
             strategy={
               verticalListSortingStrategy
             }
           >
-            <main className="space-y-7">
+            <main
+              className="
+                space-y-7
+                relative
+              "
+            >
               {rightOrder.map(
                 (sectionId) =>
                   renderSection(

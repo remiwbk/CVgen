@@ -11,6 +11,7 @@ import {
 
 import {
   useDroppable,
+  useDndContext,
 } from '@dnd-kit/core';
 
 import {
@@ -38,6 +39,12 @@ interface Props {
   captureMode?: boolean;
 }
 
+/**
+ * =========================================================
+ * ORDRE PAR DÉFAUT
+ * =========================================================
+ */
+
 const DEFAULT_SECTION_ORDER: CVSectionId[] = [
   'summary',
   'experiences',
@@ -60,37 +67,16 @@ const DEFAULT_SECTION_COLUMNS: Record<
   projects: 'right',
 };
 
-function calculateAge(
-  birthDate?: string
-): number | null {
-  if (!birthDate) return null;
+/**
+ * =========================================================
+ * IDS DES ZONES DE FIN
+ * =========================================================
+ */
 
-  const birth = new Date(birthDate);
-
-  if (Number.isNaN(birth.getTime())) {
-    return null;
-  }
-
-  const today = new Date();
-
-  let age =
-    today.getFullYear() -
-    birth.getFullYear();
-
-  const hasHadBirthday =
-    today.getMonth() >
-      birth.getMonth() ||
-    (today.getMonth() ===
-      birth.getMonth() &&
-      today.getDate() >=
-        birth.getDate());
-
-  if (!hasHadBirthday) {
-    age--;
-  }
-
-  return age >= 0 ? age : null;
-}
+const SECTION_COLUMN_BOTTOM_IDS = {
+  left: 'section-column-bottom-left',
+  right: 'section-column-bottom-right',
+} as const;
 
 /**
  * =========================================================
@@ -115,6 +101,27 @@ function CorporateColumn({
     id,
   });
 
+  const {
+    active,
+  } = useDndContext();
+
+  const isDragging =
+    Boolean(active);
+
+  const bottomId =
+    id === 'section-column-left'
+      ? SECTION_COLUMN_BOTTOM_IDS.left
+      : SECTION_COLUMN_BOTTOM_IDS.right;
+
+  const {
+    setNodeRef:
+      setBottomNodeRef,
+    isOver:
+      isBottomOver,
+  } = useDroppable({
+    id: bottomId,
+  });
+
   return (
     <div
       ref={setNodeRef}
@@ -133,10 +140,105 @@ function CorporateColumn({
         }
       `}
     >
-      {children}
+      <div className="relative">
+        {children}
+      </div>
+
+      {/* =================================================
+          INTERSECTION FINALE
+      ================================================= */}
+
+      {isDragging && (
+        <div
+          ref={setBottomNodeRef}
+          className="
+            relative
+            w-full
+            h-5
+            mt-1
+          "
+        >
+          {isBottomOver && (
+            <div
+              className="
+                pointer-events-none
+                absolute
+                left-0
+                right-0
+                top-1/2
+                -translate-y-1/2
+
+                z-[100]
+
+                h-[3px]
+                rounded-full
+
+                bg-slate-900
+                shadow-sm
+              "
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }
+
+/**
+ * =========================================================
+ * AGE
+ * =========================================================
+ */
+
+function calculateAge(
+  birthDate: string | undefined
+): number | null {
+  if (!birthDate) {
+    return null;
+  }
+
+  const birth =
+    new Date(birthDate);
+
+  if (
+    Number.isNaN(
+      birth.getTime()
+    )
+  ) {
+    return null;
+  }
+
+  const today =
+    new Date();
+
+  let age =
+    today.getFullYear() -
+    birth.getFullYear();
+
+  const hasHadBirthday =
+    today.getMonth() >
+      birth.getMonth() ||
+    (
+      today.getMonth() ===
+        birth.getMonth() &&
+      today.getDate() >=
+        birth.getDate()
+    );
+
+  if (!hasHadBirthday) {
+    age--;
+  }
+
+  return age >= 0
+    ? age
+    : null;
+}
+
+/**
+ * =========================================================
+ * TEMPLATE
+ * =========================================================
+ */
 
 export default function CorporateTemplate({
   data,
@@ -154,9 +256,10 @@ export default function CorporateTemplate({
         category.items.length > 0
     );
 
-  const age = calculateAge(
-    data.birthDate
-  );
+  const age =
+    calculateAge(
+      data.birthDate
+    );
 
   const sectionOrder: CVSectionId[] =
     data.sectionOrder?.length
@@ -167,15 +270,6 @@ export default function CorporateTemplate({
    * =========================================================
    * ORDRE / COLONNES
    * =========================================================
-   *
-   * sectionOrder conserve l'ordre global.
-   *
-   * sectionColumns indique dans quelle colonne
-   * chaque section doit être affichée.
-   *
-   * Pour les anciens CV qui n'ont pas encore
-   * sectionColumns, on reprend exactement
-   * le layout Corporate d'origine.
    */
 
   const getSectionColumn = (
@@ -246,7 +340,8 @@ export default function CorporateTemplate({
                 style={{
                   color:
                     colors.muted,
-                  fontSize: fs(11),
+                  fontSize:
+                    fs(11),
                   whiteSpace:
                     'pre-line',
                 }}
@@ -787,18 +882,15 @@ export default function CorporateTemplate({
     }
   };
 
-  /**
-   * =========================================================
-   * RENDER
-   * =========================================================
-   */
-
   return (
     <div
       style={{
-        fontFamily: fonts.body,
-        color: colors.text,
-        fontSize: fs(14),
+        fontFamily:
+          fonts.body,
+        color:
+          colors.text,
+        fontSize:
+          fs(14),
       }}
       className="
         w-full
@@ -850,7 +942,8 @@ export default function CorporateTemplate({
               style={{
                 fontFamily:
                   fonts.heading,
-                fontSize: fs(34),
+                fontSize:
+                  fs(34),
               }}
               className="
                 font-bold
@@ -862,7 +955,8 @@ export default function CorporateTemplate({
 
             <p
               style={{
-                fontSize: fs(16),
+                fontSize:
+                  fs(16),
               }}
               className="
                 mt-1
@@ -874,7 +968,8 @@ export default function CorporateTemplate({
 
             <div
               style={{
-                fontSize: fs(9.5),
+                fontSize:
+                  fs(9.5),
               }}
               className="
                 flex
@@ -1058,12 +1153,18 @@ export default function CorporateTemplate({
           id="section-column-left"
         >
           <SortableContext
-            items={leftOrder}
+            items={
+              leftOrder
+            }
             strategy={
               verticalListSortingStrategy
             }
           >
-            <aside className="space-y-7">
+            <aside
+              className="
+                space-y-7
+              "
+            >
               {leftOrder.map(
                 (sectionId) =>
                   renderSection(
@@ -1082,12 +1183,18 @@ export default function CorporateTemplate({
           id="section-column-right"
         >
           <SortableContext
-            items={rightOrder}
+            items={
+              rightOrder
+            }
             strategy={
               verticalListSortingStrategy
             }
           >
-            <main className="space-y-7">
+            <main
+              className="
+                space-y-7
+              "
+            >
               {rightOrder.map(
                 (sectionId) =>
                   renderSection(

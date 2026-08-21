@@ -43,9 +43,6 @@ interface Props {
  * =========================================================
  * ORDRE PAR DÉFAUT
  * =========================================================
- *
- * On garde exactement l'ordre défini dans CVData.
- * =========================================================
  */
 
 const DEFAULT_SECTION_ORDER: CVSectionId[] = [
@@ -91,7 +88,26 @@ const DEFAULT_SECTION_COLUMNS: Record<
 
 /**
  * =========================================================
+ * TYPES DES ZONES DROPPABLES
+ * =========================================================
+ */
+
+type TechColumnId =
+  | 'section-column-left'
+  | 'section-column-right';
+
+/**
+ * =========================================================
  * COLONNE DROPPABLE
+ * =========================================================
+ *
+ * Une colonne possède :
+ *
+ * 1. une zone globale pour permettre le changement
+ *    de colonne ;
+ *
+ * 2. une petite zone "bottom" juste après son contenu
+ *    pour permettre le drop en toute fin de colonne.
  * =========================================================
  */
 
@@ -99,10 +115,7 @@ function TechColumn({
   id,
   children,
 }: {
-  id:
-    | 'section-column-left'
-    | 'section-column-right';
-
+  id: TechColumnId;
   children: React.ReactNode;
 }) {
   const {
@@ -112,6 +125,21 @@ function TechColumn({
     id,
   });
 
+  const bottomId =
+    id ===
+    'section-column-left'
+      ? 'section-column-bottom-left'
+      : 'section-column-bottom-right';
+
+  const {
+    setNodeRef:
+      setBottomNodeRef,
+    isOver:
+      isBottomOver,
+  } = useDroppable({
+    id: bottomId,
+  });
+
   return (
     <div
       ref={setNodeRef}
@@ -119,6 +147,7 @@ function TechColumn({
         relative
         min-w-0
         min-h-full
+        w-full
         rounded-sm
         transition
 
@@ -129,7 +158,49 @@ function TechColumn({
         }
       `}
     >
+      {/* ===================================================
+          CONTENU DE LA COLONNE
+      ==================================================== */}
+
       {children}
+
+      {/* ===================================================
+          ZONE DE DROP FINALE
+      ==================================================== */}
+
+      <div
+        ref={setBottomNodeRef}
+        className="
+          relative
+          w-full
+          h-4
+          mt-0
+        "
+      >
+        {isBottomOver && (
+          <div
+            className="
+              pointer-events-none
+
+              absolute
+              left-0
+              right-0
+              top-1/2
+              -translate-y-1/2
+
+              z-[100]
+
+              h-[3px]
+
+              rounded-full
+
+              bg-slate-900
+
+              shadow-sm
+            "
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -215,10 +286,30 @@ export default function TechTemplate({
    * =========================================================
    *
    * IMPORTANT :
-   * On ne modifie jamais l'ordre global par défaut.
    *
-   * La répartition gauche/droite se fait ensuite
-   * uniquement avec sectionColumns.
+   * On conserve exactement l'ordre
+   * global par défaut.
+   *
+   * Avec cet ordre :
+   *
+   * summary
+   * experiences
+   * education
+   * skills
+   * projects
+   * interests
+   *
+   * et les colonnes par défaut :
+   *
+   * LEFT :
+   * summary
+   * skills
+   * interests
+   *
+   * RIGHT :
+   * experiences
+   * education
+   * projects
    * =========================================================
    */
 
@@ -251,30 +342,7 @@ export default function TechTemplate({
    * ORDRE DANS CHAQUE COLONNE
    * =========================================================
    *
-   * On conserve l'ordre relatif présent dans sectionOrder.
-   *
-   * Avec l'ordre par défaut :
-   *
-   * sectionOrder =
-   *
-   * summary
-   * experiences
-   * education
-   * skills
-   * projects
-   * interests
-   *
-   * on obtient naturellement :
-   *
-   * LEFT :
-   * summary
-   * skills
-   * interests
-   *
-   * RIGHT :
-   * experiences
-   * education
-   * projects
+   * On conserve l'ordre relatif de sectionOrder.
    * =========================================================
    */
 
@@ -529,11 +597,13 @@ export default function TechTemplate({
                         exp.id
                       }
                     >
-                      <div className="
-                        flex
-                        justify-between
-                        gap-4
-                      ">
+                      <div
+                        className="
+                          flex
+                          justify-between
+                          gap-4
+                        "
+                      >
                         <div>
                           <h3
                             style={{
@@ -651,11 +721,13 @@ export default function TechTemplate({
                         ed.id
                       }
                     >
-                      <div className="
-                        flex
-                        justify-between
-                        gap-4
-                      ">
+                      <div
+                        className="
+                          flex
+                          justify-between
+                          gap-4
+                        "
+                      >
                         <div>
                           <h3
                             style={{
@@ -760,12 +832,14 @@ export default function TechTemplate({
                 size={fs(14)}
               />
 
-              <div className="
-                grid
-                grid-cols-2
-                gap-x-5
-                gap-y-4
-              ">
+              <div
+                className="
+                  grid
+                  grid-cols-2
+                  gap-x-5
+                  gap-y-4
+                "
+              >
                 {data.projects.map(
                   (project) => (
                     <article
@@ -875,11 +949,13 @@ export default function TechTemplate({
           HEADER
       ====================================================== */}
 
-      <header className="
-        flex
-        gap-6
-        items-center
-      ">
+      <header
+        className="
+          flex
+          gap-6
+          items-center
+        "
+      >
         <div
           className="
             w-14
@@ -1162,12 +1238,14 @@ export default function TechTemplate({
           CONTENT
       ====================================================== */}
 
-      <div className="
-        grid
-        grid-cols-[0.62fr_1.38fr]
-        gap-8
-        mt-6
-      ">
+      <div
+        className="
+          grid
+          grid-cols-[0.62fr_1.38fr]
+          gap-8
+          mt-6
+        "
+      >
         {/* ===================================================
             LEFT — 0.62fr
         ==================================================== */}
@@ -1183,9 +1261,12 @@ export default function TechTemplate({
               verticalListSortingStrategy
             }
           >
-            <aside className="
-              space-y-6
-            ">
+            <aside
+              className="
+                space-y-6
+                relative
+              "
+            >
               {leftOrder.map(
                 (sectionId) =>
                   renderSection(
@@ -1211,9 +1292,12 @@ export default function TechTemplate({
               verticalListSortingStrategy
             }
           >
-            <main className="
-              space-y-6
-            ">
+            <main
+              className="
+                space-y-6
+                relative
+              "
+            >
               {rightOrder.map(
                 (sectionId) =>
                   renderSection(
