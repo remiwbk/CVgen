@@ -2,6 +2,8 @@ import type {
   CVData,
   CVStyle,
   TemplateId,
+  CVSectionId,
+  CVSectionColumn,
 } from '@/types/types';
 
 export interface SavedCV {
@@ -35,6 +37,42 @@ const VALID_TEMPLATES: TemplateId[] = [
   'tech',
 ];
 
+const VALID_SECTION_IDS: CVSectionId[] = [
+  'summary',
+  'skills',
+  'experiences',
+  'education',
+  'projects',
+  'interests',
+];
+
+const VALID_SECTION_COLUMNS: CVSectionColumn[] = [
+  'left',
+  'right',
+];
+
+const DEFAULT_SECTION_ORDER: CVSectionId[] = [
+  'summary',
+  'experiences',
+  'education',
+  'skills',
+  'projects',
+  'interests',
+];
+
+const DEFAULT_SECTION_COLUMNS: Record<
+  CVSectionId,
+  CVSectionColumn
+> = {
+  summary: 'left',
+  skills: 'left',
+  interests: 'left',
+
+  experiences: 'right',
+  education: 'right',
+  projects: 'right',
+};
+
 const defaultStyle: CVStyle = {
   fontScale: 1,
   fontFamily: 'inter',
@@ -52,35 +90,49 @@ const defaultStyle: CVStyle = {
 ========================================================= */
 
 function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(
-      DB_NAME,
-      DB_VERSION
-    );
+  return new Promise(
+    (resolve, reject) => {
+      const request =
+        indexedDB.open(
+          DB_NAME,
+          DB_VERSION
+        );
 
-    request.onupgradeneeded = () => {
-      const db = request.result;
+      request.onupgradeneeded =
+        () => {
+          const db =
+            request.result;
 
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, {
-          keyPath: 'id',
-        });
-      }
-    };
+          if (
+            !db.objectStoreNames.contains(
+              STORE_NAME
+            )
+          ) {
+            db.createObjectStore(
+              STORE_NAME,
+              {
+                keyPath: 'id',
+              }
+            );
+          }
+        };
 
-    request.onsuccess = () => {
-      resolve(request.result);
-    };
+      request.onsuccess = () => {
+        resolve(
+          request.result
+        );
+      };
 
-    request.onerror = () => {
-      reject(
-        request.error ??
-          new Error(
-            'Impossible d’ouvrir IndexedDB.'
-          )
-      );
-    };
-  });
+      request.onerror = () => {
+        reject(
+          request.error ??
+            new Error(
+              'Impossible d’ouvrir IndexedDB.'
+            )
+        );
+      };
+    }
+  );
 }
 
 /* =========================================================
@@ -139,8 +191,11 @@ function normalizeStyle(
   }
 
   const fontScale =
-    typeof value.fontScale === 'number' &&
-    Number.isFinite(value.fontScale)
+    typeof value.fontScale ===
+      'number' &&
+    Number.isFinite(
+      value.fontScale
+    )
       ? Math.min(
           1.3,
           Math.max(
@@ -152,6 +207,7 @@ function normalizeStyle(
 
   return {
     fontScale,
+
     fontFamily:
       stringValue(
         value.fontFamily,
@@ -196,6 +252,115 @@ function normalizeStyle(
 }
 
 /* =========================================================
+   NORMALISATION SECTION ORDER
+========================================================= */
+
+function normalizeSectionOrder(
+  value: unknown
+): CVSectionId[] {
+  if (!Array.isArray(value)) {
+    return [
+      ...DEFAULT_SECTION_ORDER,
+    ];
+  }
+
+  const valid =
+    value.filter(
+      (
+        section
+      ): section is CVSectionId =>
+        typeof section ===
+          'string' &&
+        VALID_SECTION_IDS.includes(
+          section as CVSectionId
+        )
+    );
+
+  /*
+   * On supprime les doublons.
+   */
+  const unique =
+    Array.from(
+      new Set(valid)
+    );
+
+  /*
+   * On ajoute les sections absentes
+   * à la fin afin de garantir une liste
+   * complète et exploitable.
+   */
+  for (
+    const sectionId of
+      DEFAULT_SECTION_ORDER
+  ) {
+    if (
+      !unique.includes(
+        sectionId
+      )
+    ) {
+      unique.push(
+        sectionId
+      );
+    }
+  }
+
+  return unique;
+}
+
+/* =========================================================
+   NORMALISATION SECTION COLUMNS
+========================================================= */
+
+function normalizeSectionColumns(
+  value: unknown
+): Partial<
+  Record<
+    CVSectionId,
+    CVSectionColumn
+  >
+> {
+  const result: Partial<
+    Record<
+      CVSectionId,
+      CVSectionColumn
+    >
+  > = {};
+
+  /*
+   * Pas de sectionColumns :
+   * on considère qu'il s'agit d'un ancien CV.
+   *
+   * On ne stocke rien explicitement puisque
+   * les templates peuvent utiliser leur layout
+   * par défaut.
+   */
+  if (!isObject(value)) {
+    return result;
+  }
+
+  for (
+    const sectionId of
+      VALID_SECTION_IDS
+  ) {
+    const rawColumn =
+      value[sectionId];
+
+    if (
+      typeof rawColumn ===
+        'string' &&
+      VALID_SECTION_COLUMNS.includes(
+        rawColumn as CVSectionColumn
+      )
+    ) {
+      result[sectionId] =
+        rawColumn as CVSectionColumn;
+    }
+  }
+
+  return result;
+}
+
+/* =========================================================
    NORMALISATION SKILLS
 ========================================================= */
 
@@ -208,23 +373,25 @@ function normalizeSkills(
 
   return value
     .filter(isObject)
-    .map((category, index) => ({
-      id:
-        stringValue(
-          category.id
-        ) ||
-        `skill_${index}`,
+    .map(
+      (category, index) => ({
+        id:
+          stringValue(
+            category.id
+          ) ||
+          `skill_${index}`,
 
-      name:
-        stringValue(
-          category.name
-        ),
+        name:
+          stringValue(
+            category.name
+          ),
 
-      items:
-        stringArray(
-          category.items
-        ),
-    }));
+        items:
+          stringArray(
+            category.items
+          ),
+      })
+    );
 }
 
 /* =========================================================
@@ -240,33 +407,38 @@ function normalizeExperiences(
 
   return value
     .filter(isObject)
-    .map((experience, index) => ({
-      id:
-        stringValue(
-          experience.id
-        ) ||
-        `experience_${index}`,
+    .map(
+      (
+        experience,
+        index
+      ) => ({
+        id:
+          stringValue(
+            experience.id
+          ) ||
+          `experience_${index}`,
 
-      role:
-        stringValue(
-          experience.role
-        ),
+        role:
+          stringValue(
+            experience.role
+          ),
 
-      company:
-        stringValue(
-          experience.company
-        ),
+        company:
+          stringValue(
+            experience.company
+          ),
 
-      period:
-        stringValue(
-          experience.period
-        ),
+        period:
+          stringValue(
+            experience.period
+          ),
 
-      description:
-        stringValue(
-          experience.description
-        ),
-    }));
+        description:
+          stringValue(
+            experience.description
+          ),
+      })
+    );
 }
 
 /* =========================================================
@@ -282,33 +454,38 @@ function normalizeEducation(
 
   return value
     .filter(isObject)
-    .map((education, index) => ({
-      id:
-        stringValue(
-          education.id
-        ) ||
-        `education_${index}`,
+    .map(
+      (
+        education,
+        index
+      ) => ({
+        id:
+          stringValue(
+            education.id
+          ) ||
+          `education_${index}`,
 
-      degree:
-        stringValue(
-          education.degree
-        ),
+        degree:
+          stringValue(
+            education.degree
+          ),
 
-      school:
-        stringValue(
-          education.school
-        ),
+        school:
+          stringValue(
+            education.school
+          ),
 
-      period:
-        stringValue(
-          education.period
-        ),
+        period:
+          stringValue(
+            education.period
+          ),
 
-      description:
-        stringValue(
-          education.description
-        ),
-    }));
+        description:
+          stringValue(
+            education.description
+          ),
+      })
+    );
 }
 
 /* =========================================================
@@ -324,28 +501,30 @@ function normalizeProjects(
 
   return value
     .filter(isObject)
-    .map((project, index) => ({
-      id:
-        stringValue(
-          project.id
-        ) ||
-        `project_${index}`,
+    .map(
+      (project, index) => ({
+        id:
+          stringValue(
+            project.id
+          ) ||
+          `project_${index}`,
 
-      name:
-        stringValue(
-          project.name
-        ),
+        name:
+          stringValue(
+            project.name
+          ),
 
-      url:
-        stringValue(
-          project.url
-        ),
+        url:
+          stringValue(
+            project.url
+          ),
 
-      description:
-        stringValue(
-          project.description
-        ),
-    }));
+        description:
+          stringValue(
+            project.description
+          ),
+      })
+    );
 }
 
 /* =========================================================
@@ -361,7 +540,17 @@ function normalizeCVData(
     );
   }
 
-  return {
+  const sectionOrder =
+    normalizeSectionOrder(
+      value.sectionOrder
+    );
+
+  const sectionColumns =
+    normalizeSectionColumns(
+      value.sectionColumns
+    );
+
+  const result: CVData = {
     name:
       stringValue(
         value.name
@@ -408,10 +597,25 @@ function normalizeCVData(
       ),
 
     photoScale:
-      typeof value.photoScale === 'number' &&
-      Number.isFinite(value.photoScale)
+      typeof value.photoScale ===
+          'number' &&
+      Number.isFinite(
+        value.photoScale
+      )
         ? value.photoScale
         : 1,
+
+    birthDate:
+      typeof value.birthDate ===
+        'string'
+        ? value.birthDate
+        : undefined,
+
+    hasDrivingLicense:
+      typeof value.hasDrivingLicense ===
+        'boolean'
+        ? value.hasDrivingLicense
+        : false,
 
     summary:
       stringValue(
@@ -443,18 +647,17 @@ function normalizeCVData(
         value.interests
       ),
 
-    /*
-     * IMPORTANT :
-     * Les anciens .cvgen peuvent ne pas avoir
-     * de propriété "style".
-     *
-     * On leur applique donc le style par défaut.
-     */
     style:
       normalizeStyle(
         value.style
       ),
+
+    sectionOrder,
+
+    sectionColumns,
   };
+
+  return result;
 }
 
 /* =========================================================
@@ -483,10 +686,14 @@ function normalizeTemplate(
 export async function saveCV(
   cv: SavedCV
 ): Promise<void> {
-  const db = await openDB();
+  const db =
+    await openDB();
 
   return new Promise(
-    (resolve, reject) => {
+    (
+      resolve,
+      reject
+    ) => {
       const transaction =
         db.transaction(
           STORE_NAME,
@@ -503,6 +710,7 @@ export async function saveCV(
       transaction.oncomplete =
         () => {
           db.close();
+
           resolve();
         };
 
@@ -532,7 +740,10 @@ export async function getAllCVs(): Promise<
     await openDB();
 
   return new Promise(
-    (resolve, reject) => {
+    (
+      resolve,
+      reject
+    ) => {
       const transaction =
         db.transaction(
           STORE_NAME,
@@ -559,7 +770,10 @@ export async function getAllCVs(): Promise<
               : [];
 
           cvs.sort(
-            (a, b) =>
+            (
+              a,
+              b
+            ) =>
               b.updatedAt -
               a.updatedAt
           );
@@ -593,7 +807,10 @@ export async function deleteCV(
     await openDB();
 
   return new Promise(
-    (resolve, reject) => {
+    (
+      resolve,
+      reject
+    ) => {
       const transaction =
         db.transaction(
           STORE_NAME,
@@ -610,6 +827,7 @@ export async function deleteCV(
       transaction.oncomplete =
         () => {
           db.close();
+
           resolve();
         };
 
@@ -636,10 +854,28 @@ export function downloadCVGen(
   cv: SavedCV
 ): void {
   const payload = {
-    version: 2,
-    name: cv.name,
-    template: cv.template,
-    data: cv.data,
+    /*
+     * Version 3 :
+     *
+     * - sectionOrder
+     * - sectionColumns
+     * - birthDate
+     * - hasDrivingLicense
+     * - style
+     * - etc.
+     *
+     * sont déjà présents dans cv.data.
+     */
+    version: 3,
+
+    name:
+      cv.name,
+
+    template:
+      cv.template,
+
+    data:
+      cv.data,
   };
 
   const json =
@@ -653,7 +889,8 @@ export function downloadCVGen(
     new Blob(
       [json],
       {
-        type: 'application/json',
+        type:
+          'application/json',
       }
     );
 
@@ -667,11 +904,13 @@ export function downloadCVGen(
       'a'
     );
 
-  link.href = url;
+  link.href =
+    url;
 
   link.download =
     `${sanitizeFilename(
-      cv.name || 'mon-cv'
+      cv.name ||
+        'mon-cv'
     )}.cvgen`;
 
   document.body.appendChild(
@@ -738,41 +977,50 @@ export async function importCVGen(
     parsed as CVGenFile;
 
   /*
-   * On accepte les anciennes versions.
-   *
-   * Le fichier peut avoir :
+   * Format normal :
    *
    * {
+   *   version,
    *   name,
    *   template,
    *   data
    * }
    *
-   * ou éventuellement contenir directement
-   * les données du CV.
+   * Compatibilité :
+   * si data n'existe pas, on accepte
+   * directement l'objet racine.
    */
 
   let rawData =
     fileData.data;
 
-  if (!rawData) {
+  if (
+    !rawData ||
+    !isObject(rawData)
+  ) {
     rawData =
       parsed;
   }
 
-  const data =
-    normalizeCVData(
-      rawData
-    );
+  /*
+   * Cas où template est stocké
+   * dans les données du CV.
+   */
+
+  const rawDataObject =
+    isObject(rawData)
+      ? rawData
+      : null;
 
   const template =
     normalizeTemplate(
       fileData.template ??
-        (
-          isObject(rawData)
-            ? rawData.template
-            : undefined
-        )
+        rawDataObject?.template
+    );
+
+  const data =
+    normalizeCVData(
+      rawData
     );
 
   const name =
@@ -815,6 +1063,9 @@ function sanitizeFilename(
       /\s+/g,
       '-'
     )
-    .slice(0, 100) ||
+    .slice(
+      0,
+      100
+    ) ||
     'mon-cv';
 }

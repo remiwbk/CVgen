@@ -5,41 +5,149 @@ import {
   Globe,
   Linkedin,
   Github,
+  CalendarDays,
   Car,
 } from 'lucide-react';
 
-import type { CVData, ThemeColors } from '@/types/types';
+import {
+  useDroppable,
+} from '@dnd-kit/core';
+
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+
+import type {
+  CVData,
+  ThemeColors,
+  CVSectionId,
+  CVSectionColumn,
+} from '@/types/types';
+
+import SortableSection from '@/components/SortableSection';
 
 interface Props {
   data: CVData;
   colors: ThemeColors;
-  fonts: { heading: string; body: string };
+  fonts: {
+    heading: string;
+    body: string;
+  };
   fontScale: number;
+  captureMode?: boolean;
 }
 
-function calculateAge(birthDate?: string): number | null {
-  if (!birthDate) return null;
+const DEFAULT_SECTION_ORDER: CVSectionId[] = [
+  'summary',
+  'experiences',
+  'education',
+  'skills',
+  'projects',
+  'interests',
+];
 
-  const birth = new Date(birthDate);
+const DEFAULT_SECTION_COLUMNS: Record<
+  CVSectionId,
+  CVSectionColumn
+> = {
+  summary: 'left',
+  skills: 'left',
+  interests: 'left',
 
-  if (Number.isNaN(birth.getTime())) {
+  experiences: 'right',
+  education: 'right',
+  projects: 'right',
+};
+
+/**
+ * =========================================================
+ * COLONNE DROPPABLE
+ * =========================================================
+ */
+
+function EditorialColumn({
+  id,
+  children,
+}: {
+  id:
+    | 'section-column-left'
+    | 'section-column-right';
+
+  children: React.ReactNode;
+}) {
+  const {
+    setNodeRef,
+    isOver,
+  } = useDroppable({
+    id,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`
+        relative
+        min-w-0
+        min-h-full
+        w-full
+        rounded-sm
+        transition
+
+        ${
+          isOver
+            ? 'bg-slate-50/40'
+            : ''
+        }
+      `}
+    >
+      {children}
+    </div>
+  );
+}
+
+function calculateAge(
+  birthDate?: string
+): number | null {
+  if (!birthDate) {
     return null;
   }
 
-  const today = new Date();
+  const birth =
+    new Date(birthDate);
 
-  let age = today.getFullYear() - birth.getFullYear();
+  if (
+    Number.isNaN(
+      birth.getTime()
+    )
+  ) {
+    return null;
+  }
+
+  const today =
+    new Date();
+
+  let age =
+    today.getFullYear() -
+    birth.getFullYear();
 
   const hasHadBirthday =
-    today.getMonth() > birth.getMonth() ||
-    (today.getMonth() === birth.getMonth() &&
-      today.getDate() >= birth.getDate());
+    today.getMonth() >
+      birth.getMonth() ||
+    (
+      today.getMonth() ===
+        birth.getMonth() &&
+      today.getDate() >=
+        birth.getDate()
+    );
 
   if (!hasHadBirthday) {
     age--;
   }
 
-  return age;
+  return age >= 0
+    ? age
+    : null;
 }
 
 export default function EditorialTemplate({
@@ -47,189 +155,150 @@ export default function EditorialTemplate({
   colors,
   fonts,
   fontScale,
+  captureMode = false,
 }: Props) {
-  const fs = (n: number) => `${n * fontScale}px`;
-  const hasSkills = data.skills.some((c) => c.items.length > 0);
+  const fs = (
+    n: number
+  ) =>
+    `${n * fontScale}px`;
 
-  const age = calculateAge(data.birthDate);
+  const hasSkills =
+    data.skills.some(
+      (c) =>
+        c.items.length > 0
+    );
+
+  const age =
+    calculateAge(
+      data.birthDate
+    );
 
   const contactItems = [
     {
       value: data.email,
       icon: Mail,
-      href: data.email ? `mailto:${data.email}` : undefined,
+      href: data.email
+        ? `mailto:${data.email}`
+        : undefined,
     },
+
     {
       value: data.phone,
       icon: Phone,
-      href: data.phone ? `tel:${data.phone}` : undefined,
+      href: data.phone
+        ? `tel:${data.phone}`
+        : undefined,
     },
+
     {
       value: data.location,
       icon: MapPin,
     },
+
     {
       value: data.website,
       icon: Globe,
       href: data.website
-        ? data.website.startsWith('http')
+        ? data.website.startsWith(
+            'http'
+          )
           ? data.website
           : `https://${data.website}`
         : undefined,
     },
+
     {
       value: data.linkedin,
       icon: Linkedin,
       href: data.linkedin
-        ? data.linkedin.startsWith('http')
+        ? data.linkedin.startsWith(
+            'http'
+          )
           ? data.linkedin
           : `https://${data.linkedin}`
         : undefined,
     },
+
     {
       value: data.github,
       icon: Github,
       href: data.github
-        ? data.github.startsWith('http')
+        ? data.github.startsWith(
+            'http'
+          )
           ? data.github
           : `https://${data.github}`
         : undefined,
     },
   ];
 
-  return (
-    <div
-      style={{
-        fontFamily: fonts.body,
-        color: colors.text,
-        fontSize: fs(14),
-      }}
-      className="w-full h-full px-11 py-10"
-    >
-      {/* HEADER */}
+  /**
+   * =========================================================
+   * ORDRE / COLONNES
+   * =========================================================
+   */
 
-      <header
-        className="grid grid-cols-[1fr_auto] gap-8 pb-7 border-b"
-        style={{ borderColor: colors.border }}
-      >
-        <div>
-          <div
-            style={{
-              color: colors.accent,
-              fontSize: fs(11),
-            }}
-            className="font-bold uppercase tracking-[0.3em] mb-3"
+  const sectionOrder: CVSectionId[] =
+    data.sectionOrder?.length
+      ? data.sectionOrder
+      : DEFAULT_SECTION_ORDER;
+
+  const getSectionColumn = (
+    sectionId: CVSectionId
+  ): CVSectionColumn => {
+    return (
+      data.sectionColumns?.[
+        sectionId
+      ] ??
+      DEFAULT_SECTION_COLUMNS[
+        sectionId
+      ]
+    );
+  };
+
+  const leftOrder =
+    sectionOrder.filter(
+      (sectionId) =>
+        getSectionColumn(
+          sectionId
+        ) === 'left'
+    );
+
+  const rightOrder =
+    sectionOrder.filter(
+      (sectionId) =>
+        getSectionColumn(
+          sectionId
+        ) === 'right'
+    );
+
+  /**
+   * =========================================================
+   * RENDER SECTION
+   * =========================================================
+   */
+
+  const renderSection = (
+    sectionId: CVSectionId
+  ) => {
+    switch (sectionId) {
+      /**
+       * =====================================================
+       * PROFIL
+       * =====================================================
+       */
+
+      case 'summary':
+        if (!data.summary) {
+          return null;
+        }
+
+        return (
+          <SortableSection
+            key="summary"
+            id="summary"
+            enabled={!captureMode}
           >
-            Curriculum Vitae
-          </div>
-
-          <h1
-            style={{
-              fontFamily: fonts.heading,
-              fontSize: fs(42),
-              color: colors.primary,
-            }}
-            className="font-bold leading-none tracking-tight"
-          >
-            {data.name}
-          </h1>
-
-          <p
-            style={{
-              fontSize: fs(17),
-              color: colors.secondary,
-            }}
-            className="mt-3 font-medium"
-          >
-            {data.title}
-          </p>
-
-          <div
-            style={{
-              fontSize: fs(10.5),
-              color: colors.muted,
-            }}
-            className="flex flex-wrap gap-x-4 gap-y-1.5 mt-5"
-          >
-            {contactItems.map(({ value, icon: Icon, href }, index) =>
-              value ? (
-                <span
-                  key={index}
-                  className="flex items-center gap-1.5"
-                >
-                  <Icon className="w-3 h-3" />
-
-                  {href ? (
-                    <a
-                      href={href}
-                      target={
-                        href.startsWith('http')
-                          ? '_blank'
-                          : undefined
-                      }
-                      rel={
-                        href.startsWith('http')
-                          ? 'noopener noreferrer'
-                          : undefined
-                      }
-                      style={{
-                        color: 'inherit',
-                        textDecoration: 'underline',
-                      }}
-                    >
-                      {value}
-                    </a>
-                  ) : (
-                    value
-                  )}
-                </span>
-              ) : null
-            )}
-
-            {/* ÂGE */}
-            {age !== null && (
-              <span className="flex items-center gap-1.5">
-                <span aria-hidden="true">🎂</span>
-                {age} ans
-              </span>
-            )}
-
-            {/* PERMIS B */}
-            {data.hasDrivingLicense && (
-              <span className="flex gap-1.5 items-center">
-                <Car className="w-3 h-3" />
-                Permis B
-              </span>
-            )}
-          </div>
-        </div>
-
-        {data.photo && (
-          <img
-            src={data.photo}
-            alt={data.name}
-            crossOrigin="anonymous"
-            className="object-cover rounded-xl shrink-0"
-            style={{
-              width: `${112 * (data.photoScale ?? 1)}px`,
-              height: `${112 * (data.photoScale ?? 1)}px`,
-              border: `3px solid ${colors.primary}`,
-            }}
-          />
-        )}
-      </header>
-
-      {/* CONTENT */}
-
-      <div className="grid grid-cols-[0.72fr_1.28fr] gap-9 mt-8">
-
-        {/* LEFT COLUMN */}
-
-        <aside className="space-y-7">
-
-          {/* PROFIL */}
-
-          {data.summary && (
             <section>
               <SectionTitle
                 fonts={fonts}
@@ -241,20 +310,40 @@ export default function EditorialTemplate({
 
               <p
                 style={{
-                  fontSize: fs(11.5),
-                  color: colors.muted,
-                  whiteSpace: 'pre-line',
+                  fontSize:
+                    fs(11.5),
+                  color:
+                    colors.muted,
+                  whiteSpace:
+                    'pre-line',
                 }}
-                className="leading-relaxed"
+                className="
+                  leading-relaxed
+                "
               >
                 {data.summary}
               </p>
             </section>
-          )}
+          </SortableSection>
+        );
 
-          {/* COMPÉTENCES */}
+      /**
+       * =====================================================
+       * COMPÉTENCES
+       * =====================================================
+       */
 
-          {hasSkills && (
+      case 'skills':
+        if (!hasSkills) {
+          return null;
+        }
+
+        return (
+          <SortableSection
+            key="skills"
+            id="skills"
+            enabled={!captureMode}
+          >
             <section>
               <SectionTitle
                 fonts={fonts}
@@ -265,39 +354,77 @@ export default function EditorialTemplate({
               </SectionTitle>
 
               <div className="space-y-3">
-                {data.skills.map((category) =>
-                  category.items.length > 0 ? (
-                    <div key={category.id}>
-                      <h3
-                        style={{
-                          color: colors.primary,
-                          fontSize: fs(11),
-                        }}
-                        className="font-bold mb-1"
+                {data.skills.map(
+                  (category) =>
+                    category.items.length >
+                      0 ? (
+                      <div
+                        key={
+                          category.id
+                        }
                       >
-                        {category.name}
-                      </h3>
+                        <h3
+                          style={{
+                            color:
+                              colors.primary,
+                            fontSize:
+                              fs(11),
+                          }}
+                          className="
+                            font-bold
+                            mb-1
+                          "
+                        >
+                          {
+                            category.name
+                          }
+                        </h3>
 
-                      <p
-                        style={{
-                          fontSize: fs(10.5),
-                          color: colors.muted,
-                          whiteSpace: 'pre-line',
-                        }}
-                        className="leading-relaxed"
-                      >
-                        {category.items.join(' • ')}
-                      </p>
-                    </div>
-                  ) : null
+                        <p
+                          style={{
+                            fontSize:
+                              fs(10.5),
+                            color:
+                              colors.muted,
+                            whiteSpace:
+                              'pre-line',
+                          }}
+                          className="
+                            leading-relaxed
+                          "
+                        >
+                          {category.items.join(
+                            ' • '
+                          )}
+                        </p>
+                      </div>
+                    ) : null
                 )}
               </div>
             </section>
-          )}
+          </SortableSection>
+        );
 
-          {/* CENTRES D'INTÉRÊT */}
+      /**
+       * =====================================================
+       * INTÉRÊTS
+       * =====================================================
+       */
 
-          {data.interests.length > 0 && (
+      case 'interests':
+        if (
+          data.interests.length ===
+          0
+        ) {
+          return null;
+        }
+
+        return (
+          <SortableSection
+            key="interests"
+            id="interests"
+            enabled={!captureMode}
+          >
             <section>
               <SectionTitle
                 fonts={fonts}
@@ -309,25 +436,45 @@ export default function EditorialTemplate({
 
               <p
                 style={{
-                  fontSize: fs(10.5),
-                  color: colors.muted,
-                  whiteSpace: 'pre-line',
+                  fontSize:
+                    fs(10.5),
+                  color:
+                    colors.muted,
+                  whiteSpace:
+                    'pre-line',
                 }}
-                className="leading-relaxed"
+                className="
+                  leading-relaxed
+                "
               >
-                {data.interests.join(' • ')}
+                {data.interests.join(
+                  ' • '
+                )}
               </p>
             </section>
-          )}
-        </aside>
+          </SortableSection>
+        );
 
-        {/* RIGHT COLUMN */}
+      /**
+       * =====================================================
+       * EXPÉRIENCES
+       * =====================================================
+       */
 
-        <main className="space-y-7">
+      case 'experiences':
+        if (
+          data.experiences.length ===
+          0
+        ) {
+          return null;
+        }
 
-          {/* EXPÉRIENCES */}
-
-          {data.experiences.length > 0 && (
+        return (
+          <SortableSection
+            key="experiences"
+            id="experiences"
+            enabled={!captureMode}
+          >
             <section>
               <SectionTitle
                 fonts={fonts}
@@ -338,66 +485,117 @@ export default function EditorialTemplate({
               </SectionTitle>
 
               <div className="space-y-5">
-                {data.experiences.map((exp) => (
-                  <article key={exp.id}>
-                    <div className="flex items-start justify-between gap-4">
+                {data.experiences.map(
+                  (exp) => (
+                    <article
+                      key={
+                        exp.id
+                      }
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3
+                            style={{
+                              fontFamily:
+                                fonts.heading,
+                              color:
+                                colors.accent,
+                              fontSize:
+                                fs(11),
+                            }}
+                            className="
+                              font-bold
+                            "
+                          >
+                            {
+                              exp.role
+                            }
+                          </h3>
 
-                      <div>
-                        <h3
-                          style={{
-                            fontFamily: fonts.heading,
-                            color: colors.accent,
-                            fontSize: fs(11),
-                          }}
-                          className="font-bold"
-                        >
-                          {exp.role}
-                        </h3>
+                          <p
+                            style={{
+                              color:
+                                colors.secondary,
+                              fontSize:
+                                fs(11.5),
+                            }}
+                            className="
+                              font-medium
+                              mt-0.5
+                            "
+                          >
+                            {
+                              exp.company
+                            }
+                          </p>
+                        </div>
 
-                        <p
+                        <span
                           style={{
-                            color: colors.secondary,
-                            fontSize: fs(11.5),
+                            color:
+                              colors.muted,
+                            fontSize:
+                              fs(10),
                           }}
-                          className="font-medium mt-0.5"
+                          className="
+                            shrink-0
+                            pt-1
+                          "
                         >
-                          {exp.company}
-                        </p>
+                          {
+                            exp.period
+                          }
+                        </span>
                       </div>
 
-                      <span
-                        style={{
-                          color: colors.muted,
-                          fontSize: fs(10),
-                        }}
-                        className="shrink-0 pt-1"
-                      >
-                        {exp.period}
-                      </span>
-
-                    </div>
-
-                    {exp.description && (
-                      <p
-                        style={{
-                          fontSize: fs(11),
-                          color: colors.muted,
-                          whiteSpace: 'pre-line',
-                        }}
-                        className="leading-relaxed mt-2"
-                      >
-                        {exp.description}
-                      </p>
-                    )}
-                  </article>
-                ))}
+                      {exp.description && (
+                        <p
+                          style={{
+                            fontSize:
+                              fs(11),
+                            color:
+                              colors.muted,
+                            whiteSpace:
+                              'pre-line',
+                          }}
+                          className="
+                            leading-relaxed
+                            mt-2
+                          "
+                        >
+                          {
+                            exp.description
+                          }
+                        </p>
+                      )}
+                    </article>
+                  )
+                )}
               </div>
             </section>
-          )}
+          </SortableSection>
+        );
 
-          {/* FORMATION */}
+      /**
+       * =====================================================
+       * FORMATION
+       * =====================================================
+       */
 
-          {data.education.length > 0 && (
+      case 'education':
+        if (
+          data.education.length ===
+          0
+        ) {
+          return null;
+        }
+
+        return (
+          <SortableSection
+            key="education"
+            id="education"
+            enabled={!captureMode}
+          >
             <section>
               <SectionTitle
                 fonts={fonts}
@@ -408,66 +606,116 @@ export default function EditorialTemplate({
               </SectionTitle>
 
               <div className="space-y-4">
-                {data.education.map((ed) => (
-                  <article key={ed.id}>
-                    <div className="flex items-start justify-between gap-4">
+                {data.education.map(
+                  (ed) => (
+                    <article
+                      key={
+                        ed.id
+                      }
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3
+                            style={{
+                              fontFamily:
+                                fonts.heading,
+                              color:
+                                colors.accent,
+                              fontSize:
+                                fs(11),
+                            }}
+                            className="
+                              font-bold
+                            "
+                          >
+                            {
+                              ed.degree
+                            }
+                          </h3>
 
-                      <div>
-                        <h3
-                          style={{
-                            fontFamily: fonts.heading,
-                            color: colors.accent,
-                            fontSize: fs(11),
-                          }}
-                          className="font-bold"
-                        >
-                          {ed.degree}
-                        </h3>
+                          <p
+                            style={{
+                              color:
+                                colors.secondary,
+                              fontSize:
+                                fs(11),
+                            }}
+                            className="
+                              font-medium
+                              mt-0.5
+                            "
+                          >
+                            {
+                              ed.school
+                            }
+                          </p>
+                        </div>
 
-                        <p
+                        <span
                           style={{
-                            color: colors.secondary,
-                            fontSize: fs(11),
+                            color:
+                              colors.muted,
+                            fontSize:
+                              fs(10),
                           }}
-                          className="font-medium mt-0.5"
+                          className="
+                            shrink-0
+                          "
                         >
-                          {ed.school}
-                        </p>
+                          {
+                            ed.period
+                          }
+                        </span>
                       </div>
 
-                      <span
-                        style={{
-                          color: colors.muted,
-                          fontSize: fs(10),
-                        }}
-                        className="shrink-0"
-                      >
-                        {ed.period}
-                      </span>
-
-                    </div>
-
-                    {ed.description && (
-                      <p
-                        style={{
-                          fontSize: fs(11),
-                          color: colors.muted,
-                          whiteSpace: 'pre-line',
-                        }}
-                        className="leading-relaxed mt-1.5"
-                      >
-                        {ed.description}
-                      </p>
-                    )}
-                  </article>
-                ))}
+                      {ed.description && (
+                        <p
+                          style={{
+                            fontSize:
+                              fs(11),
+                            color:
+                              colors.muted,
+                            whiteSpace:
+                              'pre-line',
+                          }}
+                          className="
+                            leading-relaxed
+                            mt-1.5
+                          "
+                        >
+                          {
+                            ed.description
+                          }
+                        </p>
+                      )}
+                    </article>
+                  )
+                )}
               </div>
             </section>
-          )}
+          </SortableSection>
+        );
 
-          {/* PROJETS */}
+      /**
+       * =====================================================
+       * PROJETS
+       * =====================================================
+       */
 
-          {data.projects.length > 0 && (
+      case 'projects':
+        if (
+          data.projects.length ===
+          0
+        ) {
+          return null;
+        }
+
+        return (
+          <SortableSection
+            key="projects"
+            id="projects"
+            enabled={!captureMode}
+          >
             <section>
               <SectionTitle
                 fonts={fonts}
@@ -478,57 +726,368 @@ export default function EditorialTemplate({
               </SectionTitle>
 
               <div className="space-y-3">
-                {data.projects.map((project) => (
-                  <article key={project.id}>
-                    <h3
-                      style={{
-                        color: colors.primary,
-                        fontSize: fs(13),
-                      }}
-                      className="font-bold"
+                {data.projects.map(
+                  (project) => (
+                    <article
+                      key={
+                        project.id
+                      }
                     >
-                      {project.name}
-                    </h3>
-
-                    {project.url && (
-                      <a
-                        href={
-                          project.url.startsWith('http')
-                            ? project.url
-                            : `https://${project.url}`
+                      <h3
+                        style={{
+                          color:
+                            colors.primary,
+                          fontSize:
+                            fs(13),
+                        }}
+                        className="
+                          font-bold
+                        "
+                      >
+                        {
+                          project.name
                         }
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          color: colors.accent,
-                          fontSize: fs(9.5),
-                          textDecoration: 'underline',
-                        }}
-                        className="inline-block mt-0.5"
-                      >
-                        {project.url}
-                      </a>
-                    )}
+                      </h3>
 
-                    {project.description && (
-                      <p
-                        style={{
-                          color: colors.muted,
-                          fontSize: fs(10.5),
-                          whiteSpace: 'pre-line',
-                        }}
-                        className="leading-relaxed mt-1"
-                      >
-                        {project.description}
-                      </p>
-                    )}
-                  </article>
-                ))}
+                      {project.url && (
+                        <a
+                          href={
+                            project.url.startsWith(
+                              'http'
+                            )
+                              ? project.url
+                              : `https://${project.url}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color:
+                              colors.accent,
+                            fontSize:
+                              fs(9.5),
+                            textDecoration:
+                              'underline',
+                          }}
+                          className="
+                            inline-block
+                            mt-0.5
+                          "
+                        >
+                          {
+                            project.url
+                          }
+                        </a>
+                      )}
+
+                      {project.description && (
+                        <p
+                          style={{
+                            color:
+                              colors.muted,
+                            fontSize:
+                              fs(10.5),
+                            whiteSpace:
+                              'pre-line',
+                          }}
+                          className="
+                            leading-relaxed
+                            mt-1
+                          "
+                        >
+                          {
+                            project.description
+                          }
+                        </p>
+                      )}
+                    </article>
+                  )
+                )}
               </div>
             </section>
-          )}
+          </SortableSection>
+        );
 
-        </main>
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div
+      style={{
+        fontFamily:
+          fonts.body,
+        color:
+          colors.text,
+        fontSize:
+          fs(14),
+      }}
+      className="
+        w-full
+        h-full
+        px-11
+        py-10
+      "
+    >
+      {/* =====================================================
+          HEADER
+      ====================================================== */}
+
+      <header
+        className="
+          grid
+          grid-cols-[1fr_auto]
+          gap-8
+          pb-7
+          border-b
+        "
+        style={{
+          borderColor:
+            colors.border,
+        }}
+      >
+        <div>
+          <div
+            style={{
+              color:
+                colors.accent,
+              fontSize:
+                fs(11),
+            }}
+            className="
+              font-bold
+              uppercase
+              tracking-[0.3em]
+              mb-3
+            "
+          >
+            Curriculum Vitae
+          </div>
+
+          <h1
+            style={{
+              fontFamily:
+                fonts.heading,
+              fontSize:
+                fs(42),
+              color:
+                colors.primary,
+            }}
+            className="
+              font-bold
+              leading-none
+              tracking-tight
+            "
+          >
+            {data.name}
+          </h1>
+
+          <p
+            style={{
+              fontSize:
+                fs(17),
+              color:
+                colors.secondary,
+            }}
+            className="
+              mt-3
+              font-medium
+            "
+          >
+            {data.title}
+          </p>
+
+          <div
+            style={{
+              fontSize:
+                fs(10.5),
+              color:
+                colors.muted,
+            }}
+            className="
+              flex
+              flex-wrap
+              gap-x-4
+              gap-y-1.5
+              mt-5
+            "
+          >
+            {contactItems.map(
+              ({
+                value,
+                icon: Icon,
+                href,
+              }, index) =>
+                value ? (
+                  <span
+                    key={index}
+                    className="
+                      flex
+                      items-center
+                      gap-1.5
+                    "
+                  >
+                    <Icon className="w-3 h-3" />
+
+                    {href ? (
+                      <a
+                        href={href}
+                        target={
+                          href.startsWith(
+                            'http'
+                          )
+                            ? '_blank'
+                            : undefined
+                        }
+                        rel={
+                          href.startsWith(
+                            'http'
+                          )
+                            ? 'noopener noreferrer'
+                            : undefined
+                        }
+                        style={{
+                          color:
+                            'inherit',
+                          textDecoration:
+                            'underline',
+                        }}
+                      >
+                        {value}
+                      </a>
+                    ) : (
+                      value
+                    )}
+                  </span>
+                ) : null
+            )}
+
+            {/* ÂGE */}
+
+            {age !== null && (
+              <span
+                className="
+                  flex
+                  items-center
+                  gap-1.5
+                "
+              >
+                <span aria-hidden="true">
+                  🎂
+                </span>
+
+                {age} ans
+              </span>
+            )}
+
+            {/* PERMIS B */}
+
+            {data.hasDrivingLicense && (
+              <span
+                className="
+                  flex
+                  gap-1.5
+                  items-center
+                "
+              >
+                <Car className="w-3 h-3" />
+
+                Permis B
+              </span>
+            )}
+          </div>
+        </div>
+
+        {data.photo && (
+          <img
+            src={data.photo}
+            alt={data.name}
+            crossOrigin="anonymous"
+            className="
+              object-cover
+              rounded-xl
+              shrink-0
+            "
+            style={{
+              width: `${
+                112 *
+                (data.photoScale ??
+                  1)
+              }px`,
+              height: `${
+                112 *
+                (data.photoScale ??
+                  1)
+              }px`,
+              border: `3px solid ${colors.primary}`,
+            }}
+          />
+        )}
+      </header>
+
+      {/* =====================================================
+          CONTENT
+      ====================================================== */}
+
+      <div
+        className="
+          grid
+          grid-cols-[0.72fr_1.28fr]
+          gap-9
+          mt-8
+        "
+      >
+        {/* ===================================================
+            LEFT COLUMN
+        ==================================================== */}
+
+        <EditorialColumn
+          id="section-column-left"
+        >
+          <SortableContext
+            items={
+              leftOrder
+            }
+            strategy={
+              verticalListSortingStrategy
+            }
+          >
+            <aside className="space-y-7">
+              {leftOrder.map(
+                (sectionId) =>
+                  renderSection(
+                    sectionId
+                  )
+              )}
+            </aside>
+          </SortableContext>
+        </EditorialColumn>
+
+        {/* ===================================================
+            RIGHT COLUMN
+        ==================================================== */}
+
+        <EditorialColumn
+          id="section-column-right"
+        >
+          <SortableContext
+            items={
+              rightOrder
+            }
+            strategy={
+              verticalListSortingStrategy
+            }
+          >
+            <main className="space-y-7">
+              {rightOrder.map(
+                (sectionId) =>
+                  renderSection(
+                    sectionId
+                  )
+              )}
+            </main>
+          </SortableContext>
+        </EditorialColumn>
       </div>
     </div>
   );
@@ -541,18 +1100,30 @@ function SectionTitle({
   fontSize,
 }: {
   children: React.ReactNode;
-  fonts: { heading: string; body: string };
+  fonts: {
+    heading: string;
+    body: string;
+  };
   colors: ThemeColors;
   fontSize: string;
 }) {
   return (
     <h2
       style={{
-        fontFamily: fonts.heading,
-        color: colors.primary,
+        fontFamily:
+          fonts.heading,
+        color:
+          colors.primary,
         fontSize,
       }}
-      className="font-bold uppercase tracking-[0.16em] pb-2 mb-4 border-b"
+      className="
+        font-bold
+        uppercase
+        tracking-[0.16em]
+        pb-2
+        mb-4
+        border-b
+      "
     >
       {children}
     </h2>

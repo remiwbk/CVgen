@@ -7,10 +7,28 @@ import {
   useState,
 } from 'react';
 
+import {
+  DndContext,
+  closestCenter,
+  pointerWithin,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type CollisionDetection,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+
+import {
+  arrayMove,
+} from '@dnd-kit/sortable';
+
 import type {
   CVData,
   TemplateId,
   ThemeColors,
+  CVSectionId,
+  CVSectionColumn,
 } from '@/types/types';
 
 import {
@@ -35,13 +53,16 @@ interface Props {
   data: CVData;
   template: TemplateId;
   captureMode?: boolean;
+
+  onChange?: (
+    data: CVData
+  ) => void;
+
+  onSectionOrderChange?: (
+    order: CVSectionId[]
+  ) => void;
 }
 
-/**
- * A4 en pixels à 96 DPI.
- *
- * 210mm × 297mm
- */
 const PAGE_PX_WIDTH =
   210 * (96 / 25.4);
 
@@ -50,15 +71,42 @@ const PAGE_PX_HEIGHT =
 
 const MIN_SCALE = 0.4;
 
-/**
- * Zoom visuel utilisateur.
- *
- * Le zoom ne touche PAS à la vraie page A4.
- * Il agit uniquement sur l'aperçu.
- */
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 1.5;
 const ZOOM_STEP = 0.1;
+
+const DEFAULT_SECTION_ORDER: CVSectionId[] = [
+  'summary',
+  'experiences',
+  'education',
+  'skills',
+  'projects',
+  'interests',
+];
+
+const SECTION_COLUMN_IDS = {
+  left: 'section-column-left',
+  right: 'section-column-right',
+} as const;
+
+const DEFAULT_SECTION_COLUMNS: Record<
+  CVSectionId,
+  CVSectionColumn
+> = {
+  summary: 'left',
+  skills: 'left',
+  interests: 'left',
+
+  experiences: 'right',
+  education: 'right',
+  projects: 'right',
+};
+
+/**
+ * =========================================================
+ * RENDER TEMPLATE
+ * =========================================================
+ */
 
 function renderTemplate(
   data: CVData,
@@ -68,90 +116,84 @@ function renderTemplate(
     heading: string;
     body: string;
   },
-  fontScale: number
+  fontScale: number,
+  captureMode = false
 ) {
+  const commonProps = {
+    data,
+    colors,
+    fonts,
+    fontScale,
+    captureMode,
+  };
+
   switch (template) {
     case 'modern':
       return (
         <ModernTemplate
-          data={data}
-          colors={colors}
-          fonts={fonts}
-          fontScale={fontScale}
+          {...commonProps}
         />
       );
 
     case 'classic':
       return (
         <ClassicTemplate
-          data={data}
-          colors={colors}
-          fonts={fonts}
-          fontScale={fontScale}
+          {...commonProps}
         />
       );
 
     case 'minimal':
       return (
         <MinimalTemplate
-          data={data}
-          colors={colors}
-          fonts={fonts}
-          fontScale={fontScale}
+          {...commonProps}
         />
       );
 
     case 'corporate':
       return (
         <CorporateTemplate
-          data={data}
-          colors={colors}
-          fonts={fonts}
-          fontScale={fontScale}
+          {...commonProps}
         />
       );
 
     case 'editorial':
       return (
         <EditorialTemplate
-          data={data}
-          colors={colors}
-          fonts={fonts}
-          fontScale={fontScale}
+          {...commonProps}
         />
       );
 
     case 'executive':
       return (
         <ExecutiveTemplate
-          data={data}
-          colors={colors}
-          fonts={fonts}
-          fontScale={fontScale}
+          {...commonProps}
         />
       );
 
     case 'swiss':
       return (
         <SwissTemplate
-          data={data}
-          colors={colors}
-          fonts={fonts}
-          fontScale={fontScale}
+          {...commonProps}
         />
       );
 
     case 'tech':
       return (
         <TechTemplate
-          data={data}
-          colors={colors}
-          fonts={fonts}
-          fontScale={fontScale}
+          {...commonProps}
         />
       );
+
+    default:
+      return null;
   }
 }
+
+/**
+ * =========================================================
+ * CV PREVIEW
+ * =========================================================
+ */
 
 const CVPreview = forwardRef<
   CVPreviewHandle,
@@ -162,6 +204,8 @@ const CVPreview = forwardRef<
       data,
       template,
       captureMode = false,
+      onChange,
+      onSectionOrderChange,
     },
     ref
   ) => {
@@ -180,17 +224,39 @@ const CVPreview = forwardRef<
     const [contentScale, setContentScale] =
       useState(1);
 
-    /**
-     * Zoom uniquement visuel.
-     *
-     * 1 = 100 %
-     */
     const [zoomScale, setZoomScale] =
       useState(1);
 
+    const [editMode, setEditMode] =
+      useState(false);
+
     /**
-     * Rend la page A4 accessible à App.tsx.
+     * =========================================================
+     * DND-KIT
+     * =========================================================
      */
+
+    const sensors = useSensors(
+      useSensor(PointerSensor, {
+        activationConstraint: {
+          distance: 8,
+        },
+      }),
+
+      useSensor(TouchSensor, {
+        activationConstraint: {
+          delay: 180,
+          tolerance: 8,
+        },
+      })
+    );
+
+    /**
+     * =========================================================
+     * REF EXPORT
+     * =========================================================
+     */
+
     useImperativeHandle(
       ref,
       () => ({
@@ -273,30 +339,772 @@ const CVPreview = forwardRef<
 
     /**
      * =========================================================
+     * SECTION ORDER
+     * =========================================================
+     */
+
+    const sectionOrder =
+      data.sectionOrder?.length
+        ? data.sectionOrder
+        : DEFAULT_SECTION_ORDER;
+
+    /**
+     * =========================================================
+     * TEMPLATES À DEUX COLONNES
+     * =========================================================
+     */
+
+    const isTwoColumnTemplate =
+      template === 'corporate' ||
+      template === 'editorial' ||
+      template === 'executive' ||
+      template === 'modern' ||
+      template === 'swiss' ||
+      template === 'tech';
+
+    /**
+     * =========================================================
+     * SECTION COLUMN
+     * =========================================================
+     */
+
+    const getSectionColumn = (
+      sectionId: CVSectionId
+    ): CVSectionColumn => {
+      return (
+        data.sectionColumns?.[
+          sectionId
+        ] ??
+        DEFAULT_SECTION_COLUMNS[
+          sectionId
+        ]
+      );
+    };
+
+    /**
+     * =========================================================
+     * COLLISION DETECTION
+     * =========================================================
+     */
+
+    const collisionDetectionStrategy: CollisionDetection =
+      (args) => {
+        /**
+         * =====================================================
+         * TEMPLATES NORMAUX
+         * =====================================================
+         */
+
+        if (!isTwoColumnTemplate) {
+          const pointerCollisions =
+            pointerWithin(args);
+
+          if (
+            pointerCollisions.length >
+            0
+          ) {
+            return pointerCollisions;
+          }
+
+          return closestCenter(
+            args
+          );
+        }
+
+        /**
+         * =====================================================
+         * TEMPLATES À DEUX COLONNES
+         * =====================================================
+         *
+         * X = colonne
+         * Y = section dans cette colonne
+         */
+
+        const pointer =
+          args.pointerCoordinates;
+
+        if (!pointer) {
+          return [];
+        }
+
+        /**
+         * -----------------------------------------------------
+         * TROUVER LA COLONNE SOUS LE CURSEUR
+         * -----------------------------------------------------
+         */
+
+        const columnContainers =
+          args.droppableContainers.filter(
+            (container) => {
+              const id =
+                String(
+                  container.id
+                );
+
+              return (
+                id ===
+                  SECTION_COLUMN_IDS.left ||
+                id ===
+                  SECTION_COLUMN_IDS.right
+              );
+            }
+          );
+
+        let targetColumn:
+          | 'left'
+          | 'right'
+          | null = null;
+
+        let targetColumnId:
+          | string
+          | null = null;
+
+        let targetColumnRect:
+          | NonNullable<
+              ReturnType<
+                typeof args.droppableRects.get
+              >
+            >
+          | null = null;
+
+        for (
+          const container of
+            columnContainers
+        ) {
+          const rect =
+            args.droppableRects.get(
+              container.id
+            );
+
+          if (!rect) {
+            continue;
+          }
+
+          if (
+            pointer.x >=
+              rect.left &&
+            pointer.x <=
+              rect.right &&
+            pointer.y >=
+              rect.top &&
+            pointer.y <=
+              rect.bottom
+          ) {
+            targetColumn =
+              String(
+                container.id
+              ) ===
+              SECTION_COLUMN_IDS.left
+                ? 'left'
+                : 'right';
+
+            targetColumnId =
+              String(
+                container.id
+              );
+
+            targetColumnRect =
+              rect;
+
+            break;
+          }
+        }
+
+        /**
+         * Aucun bloc sous le curseur.
+         */
+
+        if (
+          !targetColumn ||
+          !targetColumnId ||
+          !targetColumnRect
+        ) {
+          return [];
+        }
+
+        /**
+         * -----------------------------------------------------
+         * SECTIONS DE LA COLONNE
+         * -----------------------------------------------------
+         */
+
+        const sectionCandidates: Array<{
+          id: CVSectionId;
+          rect: NonNullable<
+            ReturnType<
+              typeof args.droppableRects.get
+            >
+          >;
+        }> = [];
+
+        for (
+          const container of
+            args.droppableContainers
+        ) {
+          const id =
+            String(
+              container.id
+            );
+
+          /**
+           * Ce ne sont pas des sections.
+           */
+
+          if (
+            id ===
+              SECTION_COLUMN_IDS.left ||
+            id ===
+              SECTION_COLUMN_IDS.right
+          ) {
+            continue;
+          }
+
+          /**
+           * L'ID n'est pas une section
+           * connue.
+           */
+
+          if (
+            !sectionOrder.includes(
+              id as CVSectionId
+            )
+          ) {
+            continue;
+          }
+
+          const sectionId =
+            id as CVSectionId;
+
+          /**
+           * La section doit appartenir
+           * à la colonne sous le curseur.
+           */
+
+          if (
+            getSectionColumn(
+              sectionId
+            ) !==
+            targetColumn
+          ) {
+            continue;
+          }
+
+          const rect =
+            args.droppableRects.get(
+              container.id
+            );
+
+          if (!rect) {
+            continue;
+          }
+
+          sectionCandidates.push({
+            id: sectionId,
+            rect,
+          });
+        }
+
+        /**
+         * Important :
+         * on trie uniquement par Y.
+         */
+
+        sectionCandidates.sort(
+          (a, b) =>
+            a.rect.top -
+            b.rect.top
+        );
+
+        /**
+         * -----------------------------------------------------
+         * CURSEUR DIRECTEMENT DANS UNE SECTION
+         * -----------------------------------------------------
+         */
+
+        for (
+          const candidate of
+            sectionCandidates
+        ) {
+          const rect =
+            candidate.rect;
+
+          if (
+            pointer.x >=
+              rect.left &&
+            pointer.x <=
+              rect.right &&
+            pointer.y >=
+              rect.top &&
+            pointer.y <=
+              rect.bottom
+          ) {
+            return [
+              {
+                id:
+                  candidate.id,
+
+                rect:
+                  candidate.rect,
+              },
+            ];
+          }
+        }
+
+        /**
+         * -----------------------------------------------------
+         * CURSEUR ENTRE DEUX SECTIONS
+         * -----------------------------------------------------
+         *
+         * On choisit la première section
+         * située sous le curseur.
+         */
+
+        for (
+          const candidate of
+            sectionCandidates
+        ) {
+          if (
+            pointer.y <
+            candidate.rect.top
+          ) {
+            return [
+              {
+                id:
+                  candidate.id,
+
+                rect:
+                  candidate.rect,
+              },
+            ];
+          }
+        }
+
+        /**
+         * -----------------------------------------------------
+         * CURSEUR SOUS LA DERNIÈRE SECTION
+         * -----------------------------------------------------
+         */
+
+        if (
+          sectionCandidates.length >
+          0
+        ) {
+          const last =
+            sectionCandidates[
+              sectionCandidates.length -
+                1
+            ];
+
+          return [
+            {
+              id:
+                last.id,
+
+              rect:
+                last.rect,
+            },
+          ];
+        }
+
+        /**
+         * -----------------------------------------------------
+         * COLONNE VIDE
+         * -----------------------------------------------------
+         */
+
+        return [
+          {
+            id:
+              targetColumnId,
+
+            rect:
+              targetColumnRect,
+          },
+        ];
+      };
+
+    /**
+     * =========================================================
+     * DND END
+     * =========================================================
+     */
+
+    const handleDragEnd = (
+      event: DragEndEvent
+    ) => {
+      if (
+        captureMode ||
+        !editMode
+      ) {
+        return;
+      }
+
+      const {
+        active,
+        over,
+      } = event;
+
+      if (!over) {
+        return;
+      }
+
+      const activeId =
+        active.id as CVSectionId;
+
+      const overId =
+        String(
+          over.id
+        );
+
+      /**
+       * =======================================================
+       * TEMPLATES À DEUX COLONNES
+       * =======================================================
+       */
+
+      if (isTwoColumnTemplate) {
+        const activeColumn =
+          getSectionColumn(
+            activeId
+          );
+
+        /**
+         * -----------------------------------------------------
+         * DROP DIRECTEMENT SUR UNE COLONNE
+         * -----------------------------------------------------
+         */
+
+        if (
+          overId ===
+            SECTION_COLUMN_IDS.left ||
+          overId ===
+            SECTION_COLUMN_IDS.right
+        ) {
+          const targetColumn =
+            overId ===
+            SECTION_COLUMN_IDS.left
+              ? 'left'
+              : 'right';
+
+          /**
+           * Même colonne :
+           * on ne change rien.
+           */
+
+          if (
+            activeColumn ===
+            targetColumn
+          ) {
+            return;
+          }
+
+          /**
+           * Retire la section de sa
+           * position actuelle.
+           */
+
+          const nextOrder =
+            sectionOrder.filter(
+              (id) =>
+                id !== activeId
+            );
+
+          /**
+           * On la place à la fin
+           * de la colonne cible.
+           */
+
+          let insertionIndex =
+            nextOrder.length;
+
+          for (
+            let index =
+              nextOrder.length -
+              1;
+            index >= 0;
+            index--
+          ) {
+            if (
+              getSectionColumn(
+                nextOrder[index]
+              ) ===
+              targetColumn
+            ) {
+              insertionIndex =
+                index + 1;
+
+              break;
+            }
+          }
+
+          nextOrder.splice(
+            insertionIndex,
+            0,
+            activeId
+          );
+
+          onChange?.({
+            ...data,
+
+            sectionOrder:
+              nextOrder,
+
+            sectionColumns: {
+              ...(data.sectionColumns ??
+                {}),
+
+              [activeId]:
+                targetColumn,
+            },
+          });
+
+          return;
+        }
+
+        /**
+         * -----------------------------------------------------
+         * DROP SUR UNE SECTION
+         * -----------------------------------------------------
+         */
+
+        const overSectionId =
+          over.id as CVSectionId;
+
+        if (
+          activeId ===
+          overSectionId
+        ) {
+          return;
+        }
+
+        const targetColumn =
+          getSectionColumn(
+            overSectionId
+          );
+
+        /**
+         * -----------------------------------------------------
+         * CHANGEMENT DE COLONNE
+         * -----------------------------------------------------
+         */
+
+        if (
+          activeColumn !==
+          targetColumn
+        ) {
+          const nextOrder =
+            sectionOrder.filter(
+              (id) =>
+                id !== activeId
+            );
+
+          const targetIndex =
+            nextOrder.indexOf(
+              overSectionId
+            );
+
+          const insertionIndex =
+            targetIndex === -1
+              ? nextOrder.length
+              : targetIndex;
+
+          nextOrder.splice(
+            insertionIndex,
+            0,
+            activeId
+          );
+
+          onChange?.({
+            ...data,
+
+            sectionOrder:
+              nextOrder,
+
+            sectionColumns: {
+              ...(data.sectionColumns ??
+                {}),
+
+              [activeId]:
+                targetColumn,
+            },
+          });
+
+          return;
+        }
+
+        /**
+         * -----------------------------------------------------
+         * MÊME COLONNE
+         * -----------------------------------------------------
+         */
+
+        const columnItems =
+          sectionOrder.filter(
+            (sectionId) =>
+              getSectionColumn(
+                sectionId
+              ) ===
+              activeColumn
+          );
+
+        const oldIndex =
+          columnItems.indexOf(
+            activeId
+          );
+
+        const newIndex =
+          columnItems.indexOf(
+            overSectionId
+          );
+
+        if (
+          oldIndex === -1 ||
+          newIndex === -1 ||
+          oldIndex ===
+            newIndex
+        ) {
+          return;
+        }
+
+        const newColumnItems =
+          arrayMove(
+            columnItems,
+            oldIndex,
+            newIndex
+          );
+
+        const newOrder:
+          CVSectionId[] =
+          [];
+
+        let columnIndex =
+          0;
+
+        for (
+          const sectionId of
+            sectionOrder
+        ) {
+          if (
+            getSectionColumn(
+              sectionId
+            ) ===
+            activeColumn
+          ) {
+            newOrder.push(
+              newColumnItems[
+                columnIndex
+              ]
+            );
+
+            columnIndex++;
+          } else {
+            newOrder.push(
+              sectionId
+            );
+          }
+        }
+
+        if (
+          onSectionOrderChange
+        ) {
+          onSectionOrderChange(
+            newOrder
+          );
+
+          return;
+        }
+
+        onChange?.({
+          ...data,
+
+          sectionOrder:
+            newOrder,
+        });
+
+        return;
+      }
+
+      /**
+       * =======================================================
+       * TEMPLATES MONO-COLONNE
+       * =======================================================
+       */
+
+      const overSectionId =
+        over.id as CVSectionId;
+
+      if (
+        activeId ===
+        overSectionId
+      ) {
+        return;
+      }
+
+      const oldIndex =
+        sectionOrder.indexOf(
+          activeId
+        );
+
+      const newIndex =
+        sectionOrder.indexOf(
+          overSectionId
+        );
+
+      if (
+        oldIndex === -1 ||
+        newIndex === -1
+      ) {
+        return;
+      }
+
+      const newOrder =
+        arrayMove(
+          sectionOrder,
+          oldIndex,
+          newIndex
+        );
+
+      if (
+        onSectionOrderChange
+      ) {
+        onSectionOrderChange(
+          newOrder
+        );
+
+        return;
+      }
+
+      onChange?.({
+        ...data,
+
+        sectionOrder:
+          newOrder,
+      });
+    };
+
+    /**
+     * =========================================================
      * FIT PREVIEW
      * =========================================================
-     *
-     * Calcule la taille permettant d'afficher la page
-     * dans la largeur disponible.
-     *
-     * Ce scale est indépendant du zoom utilisateur.
      */
+
     useLayoutEffect(() => {
       if (captureMode) {
         setFitScale(1);
         return;
       }
 
+      const pane =
+        paneRef.current;
+
+      if (!pane) {
+        return;
+      }
+
       const compute = () => {
-        const pane =
-          paneRef.current;
-
-        if (!pane) {
-          return;
-        }
-
         const available =
-          pane.clientWidth - 48;
+          pane.clientWidth -
+          48;
 
         const scale =
           Math.min(
@@ -305,7 +1113,9 @@ const CVPreview = forwardRef<
               PAGE_PX_WIDTH
           );
 
-        setFitScale(scale);
+        setFitScale(
+          scale
+        );
       };
 
       compute();
@@ -315,27 +1125,23 @@ const CVPreview = forwardRef<
           compute
         );
 
-      if (paneRef.current) {
-        ro.observe(
-          paneRef.current
-        );
-      }
+      ro.observe(
+        pane
+      );
 
-      return () =>
+      return () => {
         ro.disconnect();
-    }, [captureMode]);
+      };
+    }, [
+      captureMode,
+    ]);
 
     /**
      * =========================================================
-     * AUTO-SCALE DU CONTENU
+     * AUTO SCALE
      * =========================================================
-     *
-     * Le contenu est réduit si nécessaire pour tenir
-     * dans la page A4.
-     *
-     * Le zoom utilisateur n'intervient volontairement
-     * PAS ici.
      */
+
     useLayoutEffect(() => {
       const compute = () => {
         const content =
@@ -348,7 +1154,9 @@ const CVPreview = forwardRef<
         const natural =
           content.scrollHeight;
 
-        if (natural <= 0) {
+        if (
+          natural <= 0
+        ) {
           return;
         }
 
@@ -362,7 +1170,9 @@ const CVPreview = forwardRef<
             )
           );
 
-        setContentScale(scale);
+        setContentScale(
+          scale
+        );
       };
 
       compute();
@@ -372,9 +1182,12 @@ const CVPreview = forwardRef<
           compute
         );
 
-      if (contentRef.current) {
+      const content =
+        contentRef.current;
+
+      if (content) {
         ro.observe(
-          contentRef.current
+          content
         );
       }
 
@@ -386,6 +1199,7 @@ const CVPreview = forwardRef<
       colors,
       fonts,
       fontScale,
+      sectionOrder,
     ]);
 
     /**
@@ -394,39 +1208,63 @@ const CVPreview = forwardRef<
      * =========================================================
      */
 
-    const decreaseZoom = () => {
-      setZoomScale(
-        (current) =>
-          Math.max(
-            MIN_ZOOM,
-            Number(
-              (
-                current -
-                ZOOM_STEP
-              ).toFixed(2)
+    const decreaseZoom =
+      () => {
+        setZoomScale(
+          (current) =>
+            Math.max(
+              MIN_ZOOM,
+              Number(
+                (
+                  current -
+                  ZOOM_STEP
+                ).toFixed(2)
+              )
             )
-          )
-      );
-    };
+        );
+      };
 
-    const increaseZoom = () => {
-      setZoomScale(
-        (current) =>
-          Math.min(
-            MAX_ZOOM,
-            Number(
-              (
-                current +
-                ZOOM_STEP
-              ).toFixed(2)
+    const increaseZoom =
+      () => {
+        setZoomScale(
+          (current) =>
+            Math.min(
+              MAX_ZOOM,
+              Number(
+                (
+                  current +
+                  ZOOM_STEP
+                ).toFixed(2)
+              )
             )
-          )
-      );
-    };
+        );
+      };
 
-    const resetZoom = () => {
-      setZoomScale(1);
-    };
+    const resetZoom =
+      () => {
+        setZoomScale(1);
+      };
+
+    const previewScale =
+      fitScale *
+      zoomScale;
+
+    /**
+     * =========================================================
+     * TEMPLATE
+     * =========================================================
+     */
+
+    const templateElement =
+      renderTemplate(
+        data,
+        template,
+        colors,
+        fonts,
+        fontScale,
+        captureMode ||
+          !editMode
+      );
 
     /**
      * =========================================================
@@ -434,253 +1272,312 @@ const CVPreview = forwardRef<
      * =========================================================
      */
 
-    const previewScale =
-      fitScale * zoomScale;
-
     return (
-      <div
-        ref={paneRef}
-        className="
-          preview-scroll
-          relative
-          w-full
-          h-full
-          overflow-auto
-          flex
-          items-start
-          justify-center
-          p-6
-          pt-20
-          sm:pt-20
-          bg-slate-200
-        "
+      <DndContext
+        sensors={sensors}
+        collisionDetection={
+          collisionDetectionStrategy
+        }
+        onDragEnd={
+          handleDragEnd
+        }
       >
-        {/* ===================================================
-            CONTRÔLES DE ZOOM
-        ==================================================== */}
-
-        {!captureMode && (
-          <div
-            className="
-              absolute
-              z-20
-              top-3
-              right-3
-              sm:top-4
-              sm:right-4
-              flex
-              items-center
-              gap-1
-              rounded-xl
-              border
-              border-slate-200
-              bg-white
-              shadow-lg
-              p-1
-            "
-          >
-            {/* DÉZOOM */}
-
-            <button
-              type="button"
-              onClick={
-                decreaseZoom
-              }
-              disabled={
-                zoomScale <=
-                MIN_ZOOM
-              }
-              className="
-                w-8
-                h-8
-                sm:w-9
-                sm:h-9
-                rounded-lg
-                flex
-                items-center
-                justify-center
-                text-slate-700
-                text-lg
-                font-medium
-                hover:bg-slate-100
-                active:bg-slate-200
-                disabled:opacity-30
-                disabled:cursor-not-allowed
-                transition
-              "
-              title="Dézoomer"
-              aria-label="Dézoomer"
-            >
-              −
-            </button>
-
-            {/* POURCENTAGE */}
-
-            <button
-              type="button"
-              onClick={
-                resetZoom
-              }
-              className="
-                min-w-[54px]
-                sm:min-w-[62px]
-                h-8
-                sm:h-9
-                px-2
-                rounded-lg
-                text-[11px]
-                sm:text-xs
-                font-semibold
-                text-slate-600
-                hover:bg-slate-100
-                transition
-              "
-              title="Réinitialiser le zoom"
-              aria-label="Réinitialiser le zoom"
-            >
-              {Math.round(
-                zoomScale * 100
-              )}
-              %
-            </button>
-
-            {/* ZOOM */}
-
-            <button
-              type="button"
-              onClick={
-                increaseZoom
-              }
-              disabled={
-                zoomScale >=
-                MAX_ZOOM
-              }
-              className="
-                w-8
-                h-8
-                sm:w-9
-                sm:h-9
-                rounded-lg
-                flex
-                items-center
-                justify-center
-                text-slate-700
-                text-lg
-                font-medium
-                hover:bg-slate-100
-                active:bg-slate-200
-                disabled:opacity-30
-                disabled:cursor-not-allowed
-                transition
-              "
-              title="Zoomer"
-              aria-label="Zoomer"
-            >
-              +
-            </button>
-          </div>
-        )}
-
-        {/* ===================================================
-            WRAPPER DE MISE À L'ÉCHELLE
-        ==================================================== */}
-
         <div
-          style={{
-            width:
-              PAGE_PX_WIDTH *
-              previewScale,
-
-            height:
-              captureMode
-                ? PAGE_PX_HEIGHT *
-                  previewScale
-                : PAGE_PX_HEIGHT *
-                  previewScale,
-          }}
+          ref={
+            paneRef
+          }
           className="
+            preview-scroll
             relative
-            shrink-0
+            w-full
+            h-full
+            overflow-auto
+            flex
+            items-start
+            justify-center
+            p-6
+            pt-20
+            sm:pt-20
+            bg-slate-200
           "
         >
-          {/* =================================================
-              SCALE DE L'APERÇU
-          ================================================== */}
+          {/* =====================================================
+              BARRE DE CONTRÔLES
+          ====================================================== */}
+
+          {!captureMode && (
+            <div
+              className="
+                absolute
+                z-[100]
+                top-3
+                right-3
+                sm:top-4
+                sm:right-4
+
+                flex
+                items-center
+                gap-1
+
+                rounded-xl
+                border
+                border-slate-200
+                bg-white
+                shadow-lg
+                p-1
+              "
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  setEditMode(
+                    (current) =>
+                      !current
+                  )
+                }
+                className={`
+                  h-8
+                  sm:h-9
+                  px-3
+                  rounded-lg
+                  text-xs
+                  font-semibold
+                  transition
+
+                  ${
+                    editMode
+                      ? 'bg-slate-900 text-white'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }
+                `}
+              >
+                {editMode
+                  ? 'Terminer'
+                  : 'Modifier'}
+              </button>
+
+              <div className="w-px h-6 bg-slate-200" />
+
+              <button
+                type="button"
+                onClick={
+                  decreaseZoom
+                }
+                disabled={
+                  zoomScale <=
+                  MIN_ZOOM
+                }
+                className="
+                  w-8
+                  h-8
+                  sm:w-9
+                  sm:h-9
+                  rounded-lg
+                  flex
+                  items-center
+                  justify-center
+                  text-slate-700
+                  text-lg
+                  font-medium
+                  hover:bg-slate-100
+                  active:bg-slate-200
+                  disabled:opacity-30
+                  disabled:cursor-not-allowed
+                  transition
+                "
+                title="Dézoomer"
+              >
+                −
+              </button>
+
+              <button
+                type="button"
+                onClick={
+                  resetZoom
+                }
+                className="
+                  min-w-[54px]
+                  sm:min-w-[62px]
+                  h-8
+                  sm:h-9
+                  px-2
+                  rounded-lg
+                  text-[11px]
+                  sm:text-xs
+                  font-semibold
+                  text-slate-600
+                  hover:bg-slate-100
+                  transition
+                "
+              >
+                {Math.round(
+                  zoomScale *
+                    100
+                )}
+                %
+              </button>
+
+              <button
+                type="button"
+                onClick={
+                  increaseZoom
+                }
+                disabled={
+                  zoomScale >=
+                  MAX_ZOOM
+                }
+                className="
+                  w-8
+                  h-8
+                  sm:w-9
+                  sm:h-9
+                  rounded-lg
+                  flex
+                  items-center
+                  justify-center
+                  text-slate-700
+                  text-lg
+                  font-medium
+                  hover:bg-slate-100
+                  active:bg-slate-200
+                  disabled:opacity-30
+                  disabled:cursor-not-allowed
+                  transition
+                "
+                title="Zoomer"
+              >
+                +
+              </button>
+            </div>
+          )}
+
+          {/* =====================================================
+              PAGE
+          ====================================================== */}
 
           <div
             style={{
-              transform:
-                `scale(${previewScale})`,
-
-              transformOrigin:
-                'top left',
-
               width:
-                PAGE_PX_WIDTH,
+                PAGE_PX_WIDTH *
+                previewScale,
+
+              height:
+                PAGE_PX_HEIGHT *
+                previewScale,
             }}
+            className="
+              relative
+              shrink-0
+            "
           >
-            {/* ===============================================
-                VRAIE PAGE A4
-
-                C'est CET élément que l'on exporte.
-            ================================================ */}
-
             <div
-              ref={pageRef}
-              className="
-                a4-page
-                cv-export-page
-                bg-white
-              "
               style={{
-                width: '210mm',
-                minWidth: '210mm',
+                transform:
+                  `scale(${previewScale})`,
 
-                height: '297mm',
-                minHeight: '297mm',
+                transformOrigin:
+                  'top left',
 
-                position:
-                  'relative',
-
-                overflow:
-                  'hidden',
-
-                boxSizing:
-                  'border-box',
+                width:
+                  PAGE_PX_WIDTH,
               }}
             >
-              {/* =============================================
-                  SCALE DU CONTENU
-              ============================================== */}
-
               <div
+                ref={
+                  pageRef
+                }
+                className="
+                  a4-page
+                  cv-export-page
+                  bg-white
+                "
                 style={{
-                  transform:
-                    `scale(${contentScale})`,
-
-                  transformOrigin:
-                    'top left',
-
                   width:
-                    `${100 / contentScale}%`,
+                    '210mm',
+
+                  minWidth:
+                    '210mm',
+
+                  height:
+                    '297mm',
+
+                  minHeight:
+                    '297mm',
+
+                  position:
+                    'relative',
+
+                  overflow:
+                    'hidden',
+
+                  boxSizing:
+                    'border-box',
                 }}
               >
                 <div
-                  ref={contentRef}
+                  style={{
+                    transform:
+                      `scale(${contentScale})`,
+
+                    transformOrigin:
+                      'top left',
+
+                    width:
+                      `${100 / contentScale}%`,
+                  }}
                 >
-                  {renderTemplate(
-                    data,
-                    template,
-                    colors,
-                    fonts,
-                    fontScale
-                  )}
+                  <div
+                    ref={
+                      contentRef
+                    }
+                    className="
+                      relative
+                    "
+                  >
+                    {templateElement}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* =====================================================
+              MESSAGE
+          ====================================================== */}
+
+          {!captureMode &&
+            editMode && (
+              <div
+                className="
+                  fixed
+                  bottom-5
+                  left-1/2
+                  -translate-x-1/2
+                  z-[100]
+
+                  rounded-xl
+                  bg-slate-900
+                  text-white
+
+                  px-4
+                  py-2.5
+
+                  text-xs
+                  font-medium
+
+                  shadow-xl
+
+                  pointer-events-none
+                "
+              >
+                Glissez une section
+                avec la poignée ⋮⋮
+                pour modifier son
+                ordre
+              </div>
+            )}
         </div>
-      </div>
+      </DndContext>
     );
   }
 );

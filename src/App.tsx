@@ -55,6 +55,8 @@ import LandingPage from '@/components/LandingPage';
 
 import LegalPage from '@/pages/LegalPage';
 
+import CVTemplateThumbnail from '@/components/CVTemplateThumbnail';
+
 /**
  * ---------------------------------------------------------
  * ROUTING SIMPLE
@@ -456,6 +458,25 @@ export default function App() {
       },
       []
     );
+
+  /**
+   * ---------------------------------------------------------
+   * CHANGEMENT DE L'ORDRE DES SECTIONS
+   * ---------------------------------------------------------
+   */
+
+  const handleSectionOrderChange =
+    useCallback(
+      (order: CVData['sectionOrder']) => {
+        setData((previous) => ({
+          ...previous,
+          sectionOrder: order,
+        }));
+      },
+      []
+    );
+
+
 
   /**
    * ---------------------------------------------------------
@@ -1667,22 +1688,34 @@ export default function App() {
                     top-full
                     mt-2
                     z-50
-                    w-[420px]
-                    max-w-[calc(100vw-2rem)]
+
+                    w-[620px]
+                    max-w-[calc(100vw-1.5rem)]
+
                     rounded-2xl
                     border
                     border-slate-200
                     bg-white
                     shadow-2xl
+
                     overflow-hidden
+
                     right-0
+
+                    max-h-[calc(100vh-5rem)]
+                    flex
+                    flex-col
+
                     sm:right-0
+
                     max-sm:fixed
                     max-sm:left-1/2
                     max-sm:right-auto
                     max-sm:-translate-x-1/2
                     max-sm:top-14
                     max-sm:mt-0
+                    max-sm:w-[calc(100vw-1rem)]
+                    max-sm:max-h-[calc(100vh-4.5rem)]
                   ">
 
                     <div className="px-5 py-4 border-b border-slate-100">
@@ -1724,7 +1757,20 @@ export default function App() {
 
                     </div>
 
-                    <div className="p-4 grid grid-cols-2 gap-2">
+                    <div className="
+                      p-3
+                      sm:p-4
+
+                      grid
+                      grid-cols-2
+                      gap-2
+                      sm:gap-3
+
+                      overflow-y-auto
+                      overscroll-contain
+
+                      min-h-0
+                    ">
 
                       {themeOrder.map(
                         (id) => {
@@ -1733,7 +1779,7 @@ export default function App() {
                             id;
 
                           const descriptions: Record<
-                            string,
+                            TemplateId,
                             string
                           > = {
                             modern:
@@ -1756,21 +1802,19 @@ export default function App() {
 
                           return (
                             <button
-                              key={
-                                id
-                              }
+                              key={id}
+                              type="button"
                               onClick={() =>
-                                handleTemplateChange(
-                                  id
-                                )
+                                handleTemplateChange(id)
                               }
                               className={`
                                 relative
                                 text-left
                                 rounded-xl
                                 border
-                                p-3
+                                p-2.5
                                 transition-all
+
                                 ${
                                   isActive
                                     ? 'border-slate-900 bg-slate-50 shadow-sm'
@@ -1778,162 +1822,85 @@ export default function App() {
                                 }
                               `}
                             >
+                              {/* =================================================
+                                  CHECK
+                              ================================================== */}
 
                               {isActive && (
-                                <div className="
-                                  absolute
-                                  top-2.5
-                                  right-2.5
-                                  w-5
-                                  h-5
-                                  rounded-full
-                                  bg-slate-900
-                                  text-white
-                                  flex
-                                  items-center
-                                  justify-center
-                                ">
+                                <div
+                                  className="
+                                    absolute
+                                    top-3
+                                    right-3
+                                    z-20
+
+                                    w-5
+                                    h-5
+
+                                    rounded-full
+
+                                    bg-slate-900
+                                    text-white
+
+                                    flex
+                                    items-center
+                                    justify-center
+
+                                    shadow-sm
+                                  "
+                                >
                                   <Check className="w-3 h-3" />
                                 </div>
                               )}
 
+                              {/* =================================================
+                                  VRAI THUMBNAIL
+                              ================================================== */}
+
                               <div
-                                className={`
-                                  h-16
-                                  rounded-lg
-                                  mb-3
+                                className="
+                                  w-full
                                   overflow-hidden
+                                  rounded-lg
                                   border
-                                  ${
-                                    isActive
-                                      ? 'border-slate-300'
-                                      : 'border-slate-200'
-                                  }
-                                `}
+                                  border-slate-200
+                                  bg-white
+                                  shadow-sm
+                                "
                               >
-                                <div
-                                  className="h-full w-full p-2"
-                                  style={{
-                                    backgroundColor:
-                                      themes[
-                                        id
-                                      ].colors
-                                        .background,
-                                  }}
-                                >
-
-                                  <div
-                                    className="h-1.5 w-1/2 rounded-full mb-1.5"
-                                    style={{
-                                      backgroundColor:
-                                        themes[
-                                          id
-                                        ].colors
-                                          .primary,
-                                    }}
-                                  />
-
-                                  <div className="flex gap-1.5 h-full">
-
-                                    <div className="w-[30%] space-y-1">
-
-                                      <div
-                                        className="h-1 rounded-full opacity-70"
-                                        style={{
-                                          backgroundColor:
-                                            themes[
-                                              id
-                                            ].colors
-                                              .secondary,
-                                        }}
-                                      />
-
-                                      <div
-                                        className="h-1 rounded-full opacity-40"
-                                        style={{
-                                          backgroundColor:
-                                            themes[
-                                              id
-                                            ].colors
-                                              .muted,
-                                        }}
-                                      />
-
-                                      <div
-                                        className="h-1 rounded-full opacity-40"
-                                        style={{
-                                          backgroundColor:
-                                            themes[
-                                              id
-                                            ].colors
-                                              .muted,
-                                        }}
-                                      />
-
-                                    </div>
-
-                                    <div className="flex-1 space-y-1">
-
-                                      <div
-                                        className="h-1 rounded-full opacity-50"
-                                        style={{
-                                          backgroundColor:
-                                            themes[
-                                              id
-                                            ].colors
-                                              .text,
-                                        }}
-                                      />
-
-                                      <div
-                                        className="h-1 rounded-full opacity-30"
-                                        style={{
-                                          backgroundColor:
-                                            themes[
-                                              id
-                                            ].colors
-                                              .muted,
-                                        }}
-                                      />
-
-                                      <div
-                                        className="h-1 rounded-full opacity-30"
-                                        style={{
-                                          backgroundColor:
-                                            themes[
-                                              id
-                                            ].colors
-                                              .muted,
-                                        }}
-                                      />
-
-                                    </div>
-
-                                  </div>
-
-                                </div>
+                                <CVTemplateThumbnail
+                                  data={data}
+                                  template={id}
+                                  className="w-full"
+                                />
                               </div>
 
-                              <div className="pr-6">
+                              {/* =================================================
+                                  INFOS
+                              ================================================== */}
 
-                                <div className="text-xs font-semibold text-slate-900">
-                                  {
-                                    themes[
-                                      id
-                                    ].name
-                                  }
+                              <div className="
+                                px-1
+                                pt-2.5
+                                pb-1
+                                pr-6
+                              ">
+                                <div className="
+                                  text-xs
+                                  font-semibold
+                                  text-slate-900
+                                ">
+                                  {themes[id].name}
                                 </div>
 
-                                <div className="text-[10px] text-slate-400 mt-0.5">
-                                  {
-                                    descriptions[
-                                      id
-                                    ]
-                                  }
+                                <div className="
+                                  text-[10px]
+                                  text-slate-400
+                                  mt-0.5
+                                ">
+                                  {descriptions[id]}
                                 </div>
-
                               </div>
-
                             </button>
                           );
                         }
@@ -2182,17 +2149,15 @@ export default function App() {
             }
           `}
         >
-
           <CVPreview
-            ref={
-              previewRef
-            }
+            ref={previewRef}
             data={data}
-            template={
-              template
+            template={template}
+            onChange={handleDataChange}
+            onSectionOrderChange={
+              handleSectionOrderChange
             }
           />
-
         </main>
 
       </div>

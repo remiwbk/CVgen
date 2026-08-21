@@ -50,6 +50,18 @@ export interface CVStyle {
   border: string;
 }
 
+export type CVSectionId =
+  | 'summary'
+  | 'skills'
+  | 'experiences'
+  | 'education'
+  | 'projects'
+  | 'interests';
+
+export type CVSectionColumn =
+  | 'left'
+  | 'right';
+
 export interface CVData {
   name: string;
   title: string;
@@ -70,6 +82,13 @@ export interface CVData {
   photoScale?: number;
   birthDate?: string;
   hasDrivingLicense?:boolean;
+  sectionOrder: CVSectionId[];
+  sectionColumns?: Partial<
+    Record<
+      CVSectionId,
+      CVSectionColumn
+    >
+  >;
   
 }
 
@@ -117,6 +136,14 @@ export const emptyCV: CVData = {
   photoScale: 1.5,
   birthDate: '1990-02-15',
   hasDrivingLicense: false,
+  sectionOrder: [
+    'summary',
+    'skills',
+    'experiences',
+    'education',
+    'projects',
+    'interests',
+  ],
   summary:
     "Product designer with 8+ years crafting digital experiences for startups and enterprises. I blend user research, interaction design, and systems thinking to ship products people love.",
   skills: [

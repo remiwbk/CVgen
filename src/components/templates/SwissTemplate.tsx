@@ -9,30 +9,183 @@ import {
   Car,
 } from 'lucide-react';
 
-import type { CVData, ThemeColors } from '@/types/types';
+import {
+  useDroppable,
+} from '@dnd-kit/core';
+
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+
+import type {
+  CVData,
+  ThemeColors,
+  CVSectionId,
+  CVSectionColumn,
+} from '@/types/types';
+
+import SortableSection from '@/components/SortableSection';
 
 interface Props {
   data: CVData;
   colors: ThemeColors;
-  fonts: { heading: string; body: string };
+  fonts: {
+    heading: string;
+    body: string;
+  };
   fontScale: number;
+  captureMode?: boolean;
 }
 
-function calculateAge(birthDate: string | undefined): number | null {
-  if (!birthDate) return null;
+/**
+ * =========================================================
+ * ORDRE GLOBAL PAR DÉFAUT DE L'APPLICATION
+ * =========================================================
+ */
 
-  const birth = new Date(birthDate);
+const DEFAULT_SECTION_ORDER: CVSectionId[] = [
+  'summary',
+  'experiences',
+  'education',
+  'skills',
+  'projects',
+  'interests',
+];
 
-  if (Number.isNaN(birth.getTime())) return null;
+/**
+ * =========================================================
+ * ORDRE VISUEL ORIGINAL DU SWISS
+ * =========================================================
+ *
+ * Ceci correspond exactement au template original
+ * avant ajout du drag & drop.
+ *
+ * GAUCHE :
+ *   Profil
+ *   Compétences
+ *   Intérêts
+ *
+ * DROITE :
+ *   Expériences
+ *   Formation
+ *   Projets
+ * =========================================================
+ */
 
-  const today = new Date();
+const DEFAULT_SWISS_LAYOUT_ORDER: CVSectionId[] = [
+  'summary',
+  'skills',
+  'interests',
+  'experiences',
+  'education',
+  'projects',
+];
 
-  let age = today.getFullYear() - birth.getFullYear();
+/**
+ * =========================================================
+ * COLONNES PAR DÉFAUT
+ * =========================================================
+ */
+
+const DEFAULT_SECTION_COLUMNS: Record<
+  CVSectionId,
+  CVSectionColumn
+> = {
+  summary: 'left',
+  skills: 'left',
+  interests: 'left',
+
+  experiences: 'right',
+  education: 'right',
+  projects: 'right',
+};
+
+/**
+ * =========================================================
+ * COLONNE DROPPABLE
+ * =========================================================
+ */
+
+function SwissColumn({
+  id,
+  children,
+}: {
+  id:
+    | 'section-column-left'
+    | 'section-column-right';
+
+  children: React.ReactNode;
+}) {
+  const {
+    setNodeRef,
+    isOver,
+  } = useDroppable({
+    id,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`
+        relative
+        min-w-0
+        min-h-full
+        rounded-sm
+        transition
+
+        ${
+          isOver
+            ? 'bg-slate-50/40'
+            : ''
+        }
+      `}
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
+ * =========================================================
+ * CALCUL ÂGE
+ * =========================================================
+ */
+
+function calculateAge(
+  birthDate: string | undefined
+): number | null {
+  if (!birthDate) {
+    return null;
+  }
+
+  const birth =
+    new Date(birthDate);
+
+  if (
+    Number.isNaN(
+      birth.getTime()
+    )
+  ) {
+    return null;
+  }
+
+  const today =
+    new Date();
+
+  let age =
+    today.getFullYear() -
+    birth.getFullYear();
 
   const hasHadBirthday =
-    today.getMonth() > birth.getMonth() ||
-    (today.getMonth() === birth.getMonth() &&
-      today.getDate() >= birth.getDate());
+    today.getMonth() >
+      birth.getMonth() ||
+    (
+      today.getMonth() ===
+        birth.getMonth() &&
+      today.getDate() >=
+        birth.getDate()
+    );
 
   if (!hasHadBirthday) {
     age--;
@@ -41,198 +194,183 @@ function calculateAge(birthDate: string | undefined): number | null {
   return age;
 }
 
+/**
+ * =========================================================
+ * TEMPLATE
+ * =========================================================
+ */
+
 export default function SwissTemplate({
   data,
   colors,
   fonts,
   fontScale,
+  captureMode = false,
 }: Props) {
-  const fs = (n: number) => `${n * fontScale}px`;
-  const hasSkills = data.skills.some((c) => c.items.length > 0);
-  const age = calculateAge(data.birthDate);
+  const fs = (n: number) =>
+    `${n * fontScale}px`;
 
-  return (
-    <div
-      style={{
-        fontFamily: fonts.body,
-        color: colors.text,
-        fontSize: fs(14),
-      }}
-      className="w-full h-full px-11 py-10"
-    >
-      <header className="grid grid-cols-[auto_1fr_auto] gap-7 items-start">
-        {data.photo ? (
-          <img
-            src={data.photo}
-            alt={data.name}
-            crossOrigin="anonymous"
-            className="rounded-full object-cover shrink-0"
-            style={{
-              width: `${96 * (data.photoScale ?? 1)}px`,
-              height: `${96 * (data.photoScale ?? 1)}px`,
-            }}
-          />
-        ) : (
-          <div
-            className="w-5 h-24"
-            style={{ background: colors.primary }}
-          />
-        )}
+  const hasSkills =
+    data.skills.some(
+      (c) =>
+        c.items.length > 0
+    );
 
-        <div>
-          <h1
-            style={{
-              fontFamily: fonts.heading,
-              color: colors.primary,
-              fontSize: fs(38),
-            }}
-            className="font-bold leading-none"
+  const age =
+    calculateAge(
+      data.birthDate
+    );
+
+  /**
+   * =========================================================
+   * ORDRE
+   * =========================================================
+   *
+   * Tant que le CV utilise encore exactement
+   * l'ordre global par défaut, on restitue le
+   * layout historique du Swiss.
+   *
+   * Dès que l'ordre a été modifié par le DnD,
+   * sectionOrder devient la source de vérité.
+   * =========================================================
+   */
+
+  const isDefaultOrder =
+    data.sectionOrder?.length ===
+      DEFAULT_SECTION_ORDER.length &&
+    DEFAULT_SECTION_ORDER.every(
+      (sectionId, index) =>
+        data.sectionOrder[index] ===
+        sectionId
+    );
+
+  const sectionOrder: CVSectionId[] =
+    isDefaultOrder
+      ? DEFAULT_SWISS_LAYOUT_ORDER
+      : data.sectionOrder?.length
+        ? data.sectionOrder
+        : DEFAULT_SWISS_LAYOUT_ORDER;
+
+  /**
+   * =========================================================
+   * COLONNE D'UNE SECTION
+   * =========================================================
+   */
+
+  const getSectionColumn = (
+    sectionId: CVSectionId
+  ): CVSectionColumn => {
+    return (
+      data.sectionColumns?.[
+        sectionId
+      ] ??
+      DEFAULT_SECTION_COLUMNS[
+        sectionId
+      ]
+    );
+  };
+
+  /**
+   * =========================================================
+   * ORDRE DANS CHAQUE COLONNE
+   * =========================================================
+   */
+
+  const leftOrder =
+    sectionOrder.filter(
+      (sectionId) =>
+        getSectionColumn(
+          sectionId
+        ) === 'left'
+    );
+
+  const rightOrder =
+    sectionOrder.filter(
+      (sectionId) =>
+        getSectionColumn(
+          sectionId
+        ) === 'right'
+    );
+
+  /**
+   * =========================================================
+   * NUMÉROTATION
+   * =========================================================
+   *
+   * La numérotation suit la position réelle
+   * dans le layout.
+   *
+   * Gauche :
+   *   01 / 02 / 03
+   *
+   * Droite :
+   *   04 / 05 / 06
+   *
+   * Si une section n'est pas présente, les numéros
+   * se recalculent automatiquement.
+   * =========================================================
+   */
+
+  const visibleSectionOrder =
+    [
+      ...leftOrder,
+      ...rightOrder,
+    ];
+
+  const getSectionNumber = (
+    sectionId: CVSectionId
+  ): string => {
+    const index =
+      visibleSectionOrder.indexOf(
+        sectionId
+      );
+
+    if (index === -1) {
+      return '';
+    }
+
+    return String(
+      index + 1
+    ).padStart(2, '0');
+  };
+
+  /**
+   * =========================================================
+   * RENDER SECTION
+   * =========================================================
+   */
+
+  const renderSection = (
+    sectionId: CVSectionId
+  ) => {
+    const sectionNumber =
+      getSectionNumber(
+        sectionId
+      );
+
+    switch (sectionId) {
+      /**
+       * =====================================================
+       * PROFIL
+       * =====================================================
+       */
+
+      case 'summary':
+        if (!data.summary) {
+          return null;
+        }
+
+        return (
+          <SortableSection
+            key="summary"
+            id="summary"
+            enabled={!captureMode}
           >
-            {data.name}
-          </h1>
-
-          <p
-            style={{
-              color: colors.secondary,
-              fontSize: fs(16),
-            }}
-            className="font-medium mt-3"
-          >
-            {data.title}
-          </p>
-        </div>
-
-        <div
-          style={{
-            fontSize: fs(9.5),
-            color: colors.muted,
-          }}
-          className="space-y-1.5 text-right"
-        >
-          {data.email && (
-            <a
-              href={`mailto:${data.email}`}
-              style={{
-                color: 'inherit',
-                textDecoration: 'none',
-              }}
-              className="flex items-center gap-1.5 justify-end"
-            >
-              <Mail className="w-3 h-3" />
-              {data.email}
-            </a>
-          )}
-
-          {data.phone && (
-            <a
-              href={`tel:${data.phone.replace(/\s/g, '')}`}
-              style={{
-                color: 'inherit',
-                textDecoration: 'none',
-              }}
-              className="flex items-center gap-1.5 justify-end"
-            >
-              <Phone className="w-3 h-3" />
-              {data.phone}
-            </a>
-          )}
-
-          {data.location && (
-            <span className="flex items-center gap-1.5 justify-end">
-              <MapPin className="w-3 h-3" />
-              {data.location}
-            </span>
-          )}
-
-          {age !== null && (
-            <span className="flex items-center gap-1.5 justify-end">
-              <Calendar className="w-3 h-3" />
-              {age} ans
-            </span>
-          )}
-
-          {data.hasDrivingLicense && (
-            <span className="flex items-center gap-1.5 justify-end">
-              <Car className="w-3 h-3" />
-              Permis B
-            </span>
-          )}
-
-          {data.website && (
-            <a
-              href={
-                data.website.startsWith('http')
-                  ? data.website
-                  : `https://${data.website}`
-              }
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: 'inherit',
-                textDecoration: 'none',
-              }}
-              className="flex items-center gap-1.5 justify-end"
-            >
-              <Globe className="w-3 h-3" />
-              {data.website}
-            </a>
-          )}
-
-          {data.linkedin && (
-            <a
-              href={
-                data.linkedin.startsWith('http')
-                  ? data.linkedin
-                  : `https://${data.linkedin}`
-              }
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: 'inherit',
-                textDecoration: 'none',
-              }}
-              className="flex items-center gap-1.5 justify-end"
-            >
-              <Linkedin className="w-3 h-3" />
-              {data.linkedin}
-            </a>
-          )}
-
-          {data.github && (
-            <a
-              href={
-                data.github.startsWith('http')
-                  ? data.github
-                  : `https://${data.github}`
-              }
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: 'inherit',
-                textDecoration: 'none',
-              }}
-              className="flex items-center gap-1.5 justify-end"
-            >
-              <Github className="w-3 h-3" />
-              {data.github}
-            </a>
-          )}
-        </div>
-      </header>
-
-      <div
-        className="mt-8 border-t"
-        style={{ borderColor: colors.border }}
-      />
-
-      <div className="grid grid-cols-[0.38fr_0.62fr] gap-10 mt-7">
-        <aside className="space-y-7">
-          {/* PROFIL */}
-
-          {data.summary && (
             <section>
               <NumberTitle
-                number="01"
+                number={
+                  sectionNumber
+                }
                 title="Profil"
                 colors={colors}
                 fonts={fonts}
@@ -241,23 +379,45 @@ export default function SwissTemplate({
 
               <p
                 style={{
-                  fontSize: fs(10.5),
-                  color: colors.muted,
-                  whiteSpace: 'pre-line',
+                  fontSize:
+                    fs(10.5),
+                  color:
+                    colors.muted,
+                  whiteSpace:
+                    'pre-line',
                 }}
-                className="leading-relaxed"
+                className="
+                  leading-relaxed
+                "
               >
                 {data.summary}
               </p>
             </section>
-          )}
+          </SortableSection>
+        );
 
-          {/* COMPÉTENCES */}
+      /**
+       * =====================================================
+       * COMPÉTENCES
+       * =====================================================
+       */
 
-          {hasSkills && (
+      case 'skills':
+        if (!hasSkills) {
+          return null;
+        }
+
+        return (
+          <SortableSection
+            key="skills"
+            id="skills"
+            enabled={!captureMode}
+          >
             <section>
               <NumberTitle
-                number="02"
+                number={
+                  sectionNumber
+                }
                 title="Compétences"
                 colors={colors}
                 fonts={fonts}
@@ -265,41 +425,80 @@ export default function SwissTemplate({
               />
 
               <div className="space-y-3">
-                {data.skills.map((category) =>
-                  category.items.length > 0 ? (
-                    <div key={category.id}>
-                      <h3
-                        style={{
-                          fontSize: fs(10),
-                          color: colors.secondary,
-                        }}
-                        className="font-bold"
+                {data.skills.map(
+                  (category) =>
+                    category.items.length >
+                      0 ? (
+                      <div
+                        key={
+                          category.id
+                        }
                       >
-                        {category.name}
-                      </h3>
+                        <h3
+                          style={{
+                            fontSize:
+                              fs(10),
+                            color:
+                              colors.secondary,
+                          }}
+                          className="
+                            font-bold
+                          "
+                        >
+                          {
+                            category.name
+                          }
+                        </h3>
 
-                      <p
-                        style={{
-                          fontSize: fs(9.5),
-                          color: colors.muted,
-                        }}
-                        className="leading-relaxed mt-1"
-                      >
-                        {category.items.join(' · ')}
-                      </p>
-                    </div>
-                  ) : null
+                        <p
+                          style={{
+                            fontSize:
+                              fs(9.5),
+                            color:
+                              colors.muted,
+                          }}
+                          className="
+                            leading-relaxed
+                            mt-1
+                          "
+                        >
+                          {category.items.join(
+                            ' · '
+                          )}
+                        </p>
+                      </div>
+                    ) : null
                 )}
               </div>
             </section>
-          )}
+          </SortableSection>
+        );
 
-          {/* INTÉRÊTS */}
+      /**
+       * =====================================================
+       * INTÉRÊTS
+       * =====================================================
+       */
 
-          {data.interests.length > 0 && (
+      case 'interests':
+        if (
+          data.interests.length ===
+          0
+        ) {
+          return null;
+        }
+
+        return (
+          <SortableSection
+            key="interests"
+            id="interests"
+            enabled={!captureMode}
+          >
             <section>
               <NumberTitle
-                number="03"
+                number={
+                  sectionNumber
+                }
                 title="Intérêts"
                 colors={colors}
                 fonts={fonts}
@@ -308,25 +507,50 @@ export default function SwissTemplate({
 
               <p
                 style={{
-                  fontSize: fs(10),
-                  color: colors.muted,
-                  whiteSpace: 'pre-line',
+                  fontSize:
+                    fs(10),
+                  color:
+                    colors.muted,
+                  whiteSpace:
+                    'pre-line',
                 }}
-                className="leading-relaxed"
+                className="
+                  leading-relaxed
+                "
               >
-                {data.interests.join(' · ')}
+                {data.interests.join(
+                  ' · '
+                )}
               </p>
             </section>
-          )}
-        </aside>
+          </SortableSection>
+        );
 
-        <main className="space-y-7">
-          {/* EXPÉRIENCES */}
+      /**
+       * =====================================================
+       * EXPÉRIENCES
+       * =====================================================
+       */
 
-          {data.experiences.length > 0 && (
+      case 'experiences':
+        if (
+          data.experiences.length ===
+          0
+        ) {
+          return null;
+        }
+
+        return (
+          <SortableSection
+            key="experiences"
+            id="experiences"
+            enabled={!captureMode}
+          >
             <section>
               <NumberTitle
-                number="04"
+                number={
+                  sectionNumber
+                }
                 title="Expériences"
                 colors={colors}
                 fonts={fonts}
@@ -334,66 +558,121 @@ export default function SwissTemplate({
               />
 
               <div className="space-y-5">
-                {data.experiences.map((exp) => (
-                  <article key={exp.id}>
-                    <div className="grid grid-cols-[1fr_auto] gap-5">
-                      <div>
-                        <h3
-                          style={{
-                            fontFamily: fonts.heading,
-                            color: colors.secondary,
-                            fontSize: fs(11),
-                          }}
-                          className="font-bold"
-                        >
-                          {exp.role}
-                        </h3>
+                {data.experiences.map(
+                  (exp) => (
+                    <article
+                      key={
+                        exp.id
+                      }
+                    >
+                      <div className="
+                        grid
+                        grid-cols-[1fr_auto]
+                        gap-5
+                      ">
+                        <div>
+                          <h3
+                            style={{
+                              fontFamily:
+                                fonts.heading,
+                              color:
+                                colors.secondary,
+                              fontSize:
+                                fs(11),
+                            }}
+                            className="
+                              font-bold
+                            "
+                          >
+                            {
+                              exp.role
+                            }
+                          </h3>
 
-                        <p
+                          <p
+                            style={{
+                              color:
+                                colors.muted,
+                              fontSize:
+                                fs(10.5),
+                            }}
+                            className="
+                              font-medium
+                            "
+                          >
+                            {
+                              exp.company
+                            }
+                          </p>
+                        </div>
+
+                        <span
                           style={{
-                            color: colors.muted,
-                            fontSize: fs(10.5),
+                            color:
+                              colors.muted,
+                            fontSize:
+                              fs(9.5),
                           }}
-                          className="font-medium"
                         >
-                          {exp.company}
-                        </p>
+                          {
+                            exp.period
+                          }
+                        </span>
                       </div>
 
-                      <span
-                        style={{
-                          color: colors.muted,
-                          fontSize: fs(9.5),
-                        }}
-                      >
-                        {exp.period}
-                      </span>
-                    </div>
-
-                    {exp.description && (
-                      <p
-                        style={{
-                          fontSize: fs(10.5),
-                          color: colors.muted,
-                          whiteSpace: 'pre-line',
-                        }}
-                        className="leading-relaxed mt-2"
-                      >
-                        {exp.description}
-                      </p>
-                    )}
-                  </article>
-                ))}
+                      {exp.description && (
+                        <p
+                          style={{
+                            fontSize:
+                              fs(10.5),
+                            color:
+                              colors.muted,
+                            whiteSpace:
+                              'pre-line',
+                          }}
+                          className="
+                            leading-relaxed
+                            mt-2
+                          "
+                        >
+                          {
+                            exp.description
+                          }
+                        </p>
+                      )}
+                    </article>
+                  )
+                )}
               </div>
             </section>
-          )}
+          </SortableSection>
+        );
 
-          {/* FORMATION */}
+      /**
+       * =====================================================
+       * FORMATION
+       * =====================================================
+       */
 
-          {data.education.length > 0 && (
+      case 'education':
+        if (
+          data.education.length ===
+          0
+        ) {
+          return null;
+        }
+
+        return (
+          <SortableSection
+            key="education"
+            id="education"
+            enabled={!captureMode}
+          >
             <section>
               <NumberTitle
-                number="05"
+                number={
+                  sectionNumber
+                }
                 title="Formation"
                 colors={colors}
                 fonts={fonts}
@@ -401,65 +680,118 @@ export default function SwissTemplate({
               />
 
               <div className="space-y-4">
-                {data.education.map((ed) => (
-                  <article key={ed.id}>
-                    <div className="grid grid-cols-[1fr_auto] gap-5">
-                      <div>
-                        <h3
-                          style={{
-                            fontFamily: fonts.heading,
-                            color: colors.secondary,
-                            fontSize: fs(11),
-                          }}
-                          className="font-bold"
-                        >
-                          {ed.degree}
-                        </h3>
+                {data.education.map(
+                  (ed) => (
+                    <article
+                      key={
+                        ed.id
+                      }
+                    >
+                      <div className="
+                        grid
+                        grid-cols-[1fr_auto]
+                        gap-5
+                      ">
+                        <div>
+                          <h3
+                            style={{
+                              fontFamily:
+                                fonts.heading,
+                              color:
+                                colors.secondary,
+                              fontSize:
+                                fs(11),
+                            }}
+                            className="
+                              font-bold
+                            "
+                          >
+                            {
+                              ed.degree
+                            }
+                          </h3>
 
-                        <p
+                          <p
+                            style={{
+                              color:
+                                colors.muted,
+                              fontSize:
+                                fs(10),
+                            }}
+                          >
+                            {
+                              ed.school
+                            }
+                          </p>
+                        </div>
+
+                        <span
                           style={{
-                            color: colors.muted,
-                            fontSize: fs(10),
+                            color:
+                              colors.muted,
+                            fontSize:
+                              fs(9.5),
                           }}
                         >
-                          {ed.school}
-                        </p>
+                          {
+                            ed.period
+                          }
+                        </span>
                       </div>
 
-                      <span
-                        style={{
-                          color: colors.muted,
-                          fontSize: fs(9.5),
-                        }}
-                      >
-                        {ed.period}
-                      </span>
-                    </div>
-
-                    {ed.description && (
-                      <p
-                        style={{
-                          fontSize: fs(10),
-                          color: colors.muted,
-                          whiteSpace: 'pre-line',
-                        }}
-                        className="leading-relaxed mt-1.5"
-                      >
-                        {ed.description}
-                      </p>
-                    )}
-                  </article>
-                ))}
+                      {ed.description && (
+                        <p
+                          style={{
+                            fontSize:
+                              fs(10),
+                            color:
+                              colors.muted,
+                            whiteSpace:
+                              'pre-line',
+                          }}
+                          className="
+                            leading-relaxed
+                            mt-1.5
+                          "
+                        >
+                          {
+                            ed.description
+                          }
+                        </p>
+                      )}
+                    </article>
+                  )
+                )}
               </div>
             </section>
-          )}
+          </SortableSection>
+        );
 
-          {/* PROJETS */}
+      /**
+       * =====================================================
+       * PROJETS
+       * =====================================================
+       */
 
-          {data.projects.length > 0 && (
+      case 'projects':
+        if (
+          data.projects.length ===
+          0
+        ) {
+          return null;
+        }
+
+        return (
+          <SortableSection
+            key="projects"
+            id="projects"
+            enabled={!captureMode}
+          >
             <section>
               <NumberTitle
-                number="06"
+                number={
+                  sectionNumber
+                }
                 title="Projets"
                 colors={colors}
                 fonts={fonts}
@@ -467,60 +799,480 @@ export default function SwissTemplate({
               />
 
               <div className="space-y-3">
-                {data.projects.map((project) => (
-                  <article key={project.id}>
-                    <h3
-                      style={{
-                        fontSize: fs(11.5),
-                        color: colors.secondary,
-                      }}
-                      className="font-bold"
+                {data.projects.map(
+                  (project) => (
+                    <article
+                      key={
+                        project.id
+                      }
                     >
-                      {project.name}
-                    </h3>
-
-                    {project.url && (
-                      <a
-                        href={
-                          project.url.startsWith('http')
-                            ? project.url
-                            : `https://${project.url}`
+                      <h3
+                        style={{
+                          fontSize:
+                            fs(11.5),
+                          color:
+                            colors.secondary,
+                        }}
+                        className="
+                          font-bold
+                        "
+                      >
+                        {
+                          project.name
                         }
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          color: colors.accent,
-                          fontSize: fs(9),
-                          textDecoration: 'underline',
-                        }}
-                        className="inline-block"
-                      >
-                        {project.url}
-                      </a>
-                    )}
+                      </h3>
 
-                    {project.description && (
-                      <p
-                        style={{
-                          fontSize: fs(9.5),
-                          color: colors.muted,
-                          whiteSpace: 'pre-line',
-                        }}
-                        className="leading-relaxed mt-1"
-                      >
-                        {project.description}
-                      </p>
-                    )}
-                  </article>
-                ))}
+                      {project.url && (
+                        <a
+                          href={
+                            project.url.startsWith(
+                              'http'
+                            )
+                              ? project.url
+                              : `https://${project.url}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color:
+                              colors.accent,
+                            fontSize:
+                              fs(9),
+                            textDecoration:
+                              'underline',
+                          }}
+                          className="
+                            inline-block
+                          "
+                        >
+                          {
+                            project.url
+                          }
+                        </a>
+                      )}
+
+                      {project.description && (
+                        <p
+                          style={{
+                            fontSize:
+                              fs(9.5),
+                            color:
+                              colors.muted,
+                            whiteSpace:
+                              'pre-line',
+                          }}
+                          className="
+                            leading-relaxed
+                            mt-1
+                          "
+                        >
+                          {
+                            project.description
+                          }
+                        </p>
+                      )}
+                    </article>
+                  )
+                )}
               </div>
             </section>
+          </SortableSection>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div
+      style={{
+        fontFamily:
+          fonts.body,
+        color:
+          colors.text,
+        fontSize:
+          fs(14),
+      }}
+      className="
+        w-full
+        h-full
+        px-11
+        py-10
+      "
+    >
+      {/* =====================================================
+          HEADER
+      ====================================================== */}
+
+      <header className="
+        grid
+        grid-cols-[auto_1fr_auto]
+        gap-7
+        items-start
+      ">
+        {data.photo ? (
+          <img
+            src={data.photo}
+            alt={data.name}
+            crossOrigin="anonymous"
+            className="
+              rounded-full
+              object-cover
+              shrink-0
+            "
+            style={{
+              width: `${
+                96 *
+                (data.photoScale ??
+                  1)
+              }px`,
+              height: `${
+                96 *
+                (data.photoScale ??
+                  1)
+              }px`,
+            }}
+          />
+        ) : (
+          <div
+            className="
+              w-5
+              h-24
+            "
+            style={{
+              background:
+                colors.primary,
+            }}
+          />
+        )}
+
+        <div>
+          <h1
+            style={{
+              fontFamily:
+                fonts.heading,
+              color:
+                colors.primary,
+              fontSize:
+                fs(38),
+            }}
+            className="
+              font-bold
+              leading-none
+            "
+          >
+            {data.name}
+          </h1>
+
+          <p
+            style={{
+              color:
+                colors.secondary,
+              fontSize:
+                fs(16),
+            }}
+            className="
+              font-medium
+              mt-3
+            "
+          >
+            {data.title}
+          </p>
+        </div>
+
+        <div
+          style={{
+            fontSize:
+              fs(9.5),
+            color:
+              colors.muted,
+          }}
+          className="
+            space-y-1.5
+            text-right
+          "
+        >
+          {data.email && (
+            <a
+              href={`mailto:${data.email}`}
+              style={{
+                color:
+                  'inherit',
+                textDecoration:
+                  'none',
+              }}
+              className="
+                flex
+                items-center
+                gap-1.5
+                justify-end
+              "
+            >
+              <Mail className="w-3 h-3" />
+              {
+                data.email
+              }
+            </a>
           )}
-        </main>
+
+          {data.phone && (
+            <a
+              href={`tel:${data.phone.replace(
+                /\s/g,
+                ''
+              )}`}
+              style={{
+                color:
+                  'inherit',
+                textDecoration:
+                  'none',
+              }}
+              className="
+                flex
+                items-center
+                gap-1.5
+                justify-end
+              "
+            >
+              <Phone className="w-3 h-3" />
+              {
+                data.phone
+              }
+            </a>
+          )}
+
+          {data.location && (
+            <span
+              className="
+                flex
+                items-center
+                gap-1.5
+                justify-end
+              "
+            >
+              <MapPin className="w-3 h-3" />
+              {
+                data.location
+              }
+            </span>
+          )}
+
+          {age !== null && (
+            <span
+              className="
+                flex
+                items-center
+                gap-1.5
+                justify-end
+              "
+            >
+              <Calendar className="w-3 h-3" />
+              {
+                age
+              } ans
+            </span>
+          )}
+
+          {data.hasDrivingLicense && (
+            <span
+              className="
+                flex
+                items-center
+                gap-1.5
+                justify-end
+              "
+            >
+              <Car className="w-3 h-3" />
+              Permis B
+            </span>
+          )}
+
+          {data.website && (
+            <a
+              href={
+                data.website.startsWith(
+                  'http'
+                )
+                  ? data.website
+                  : `https://${data.website}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color:
+                  'inherit',
+                textDecoration:
+                  'none',
+              }}
+              className="
+                flex
+                items-center
+                gap-1.5
+                justify-end
+              "
+            >
+              <Globe className="w-3 h-3" />
+              {
+                data.website
+              }
+            </a>
+          )}
+
+          {data.linkedin && (
+            <a
+              href={
+                data.linkedin.startsWith(
+                  'http'
+                )
+                  ? data.linkedin
+                  : `https://${data.linkedin}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color:
+                  'inherit',
+                textDecoration:
+                  'none',
+              }}
+              className="
+                flex
+                items-center
+                gap-1.5
+                justify-end
+              "
+            >
+              <Linkedin className="w-3 h-3" />
+              {
+                data.linkedin
+              }
+            </a>
+          )}
+
+          {data.github && (
+            <a
+              href={
+                data.github.startsWith(
+                  'http'
+                )
+                  ? data.github
+                  : `https://${data.github}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color:
+                  'inherit',
+                textDecoration:
+                  'none',
+              }}
+              className="
+                flex
+                items-center
+                gap-1.5
+                justify-end
+              "
+            >
+              <Github className="w-3 h-3" />
+              {
+                data.github
+              }
+            </a>
+          )}
+        </div>
+      </header>
+
+      {/* =====================================================
+          SÉPARATEUR
+      ====================================================== */}
+
+      <div
+        className="
+          mt-8
+          border-t
+        "
+        style={{
+          borderColor:
+            colors.border,
+        }}
+      />
+
+      {/* =====================================================
+          CONTENT
+      ====================================================== */}
+
+      <div className="
+        grid
+        grid-cols-[0.38fr_0.62fr]
+        gap-10
+        mt-7
+      ">
+        {/* ===================================================
+            LEFT
+        ==================================================== */}
+
+        <SwissColumn
+          id="section-column-left"
+        >
+          <SortableContext
+            items={
+              leftOrder
+            }
+            strategy={
+              verticalListSortingStrategy
+            }
+          >
+            <aside className="
+              space-y-7
+            ">
+              {leftOrder.map(
+                (sectionId) =>
+                  renderSection(
+                    sectionId
+                  )
+              )}
+            </aside>
+          </SortableContext>
+        </SwissColumn>
+
+        {/* ===================================================
+            RIGHT
+        ==================================================== */}
+
+        <SwissColumn
+          id="section-column-right"
+        >
+          <SortableContext
+            items={
+              rightOrder
+            }
+            strategy={
+              verticalListSortingStrategy
+            }
+          >
+            <main className="
+              space-y-7
+            ">
+              {rightOrder.map(
+                (sectionId) =>
+                  renderSection(
+                    sectionId
+                  )
+              )}
+            </main>
+          </SortableContext>
+        </SwissColumn>
       </div>
     </div>
   );
 }
+
+/**
+ * =========================================================
+ * TITRE NUMÉROTÉ
+ * =========================================================
+ */
 
 function NumberTitle({
   number,
@@ -532,28 +1284,49 @@ function NumberTitle({
   number: string;
   title: string;
   colors: ThemeColors;
-  fonts: { heading: string; body: string };
+  fonts: {
+    heading: string;
+    body: string;
+  };
   size: string;
 }) {
   return (
-    <div className="flex items-center gap-3 mb-3">
+    <div
+      className="
+        flex
+        items-center
+        gap-3
+        mb-3
+      "
+    >
       <span
         style={{
-          color: colors.accent,
-          fontSize: fsNumber(size),
+          color:
+            colors.accent,
+          fontSize:
+            fsNumber(size),
         }}
-        className="font-bold"
+        className="
+          font-bold
+        "
       >
         {number}
       </span>
 
       <h2
         style={{
-          color: colors.primary,
-          fontFamily: fonts.heading,
-          fontSize: size,
+          color:
+            colors.primary,
+          fontFamily:
+            fonts.heading,
+          fontSize:
+            size,
         }}
-        className="font-bold uppercase tracking-[0.18em]"
+        className="
+          font-bold
+          uppercase
+          tracking-[0.18em]
+        "
       >
         {title}
       </h2>
@@ -562,12 +1335,19 @@ function NumberTitle({
 }
 
 /**
- * Les numéros restent légèrement plus petits que les titres.
+ * Les numéros restent légèrement
+ * plus petits que les titres.
  */
-function fsNumber(size: string) {
-  const value = parseFloat(size);
 
-  if (Number.isNaN(value)) {
+function fsNumber(
+  size: string
+) {
+  const value =
+    parseFloat(size);
+
+  if (
+    Number.isNaN(value)
+  ) {
     return size;
   }
 
